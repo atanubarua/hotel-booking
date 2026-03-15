@@ -61,9 +61,6 @@ export function AdminSidebar() {
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/admin" prefetch>
                                 <AppLogo />
-                                <span className="font-semibold text-sidebar-foreground">
-                                    Admin
-                                </span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -136,16 +133,6 @@ export function AdminSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter
-                    items={[
-                        {
-                            title: 'Main App',
-                            href: '/dashboard',
-                            icon: LayoutGrid,
-                        },
-                    ]}
-                    className="mt-auto"
-                />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

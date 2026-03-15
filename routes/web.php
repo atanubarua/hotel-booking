@@ -8,7 +8,9 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::middleware(['non_admin_dashboard'])->group(function () {
+        Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    });
 
     // Admin dashboard (Booking.com / Oyo-style admin)
     Route::prefix('admin')->name('admin.')->group(function () {

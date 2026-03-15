@@ -80,15 +80,15 @@ export function DataTable<T>({
             )}
         >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-1 flex-wrap items-center gap-2 sm:max-w-md">
-                    <div className="relative flex-1 sm:flex-initial">
+                <div className="flex flex-1 flex-wrap items-center gap-2 sm:max-w-xl">
+                    <div className="relative flex-1 sm:min-w-[24rem]">
                         <SearchIcon className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
                         <Input
                             placeholder={searchPlaceholder}
                             value={searchValue}
                             onChange={(e) => onSearchChange(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && onSearchApply()}
-                            className="h-9 pl-9 pr-2"
+                            className="h-9 w-full pl-9 pr-2"
                         />
                     </div>
                     <Button
