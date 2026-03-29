@@ -33,4 +33,9 @@ class Room extends Model
             ->orderByDesc('priority')
             ->orderBy('start_date');
     }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
 }

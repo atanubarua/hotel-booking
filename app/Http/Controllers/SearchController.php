@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Hotel;
+use App\Models\Booking;
 use App\Support\RoomPricing;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -113,9 +114,17 @@ class SearchController extends Controller
         $checkout = $request->input('checkout');
 
         $rooms = $hotel->rooms()
-            ->where('status', 'available')
+            ->whereNotIn('status', ['maintenance', 'out_of_order'])
             ->where('capacity', '>=', $guests)
             ->with(['images' => fn ($q) => $q->orderBy('order'), 'priceRules'])
+            ->when($checkin && $checkout, function ($query) use ($checkin, $checkout) {
+                // Exclude rooms that have a confirmed/pending booking overlapping the requested dates
+                $query->whereDoesntHave('bookings', function ($bq) use ($checkin, $checkout) {
+                    $bq->whereIn('status', ['confirmed', 'pending'])
+                       ->where('check_in', '<', $checkout)
+                       ->where('check_out', '>', $checkin);
+                });
+            })
             ->get();
 
         $rooms = $rooms->map(function ($room) use ($checkin, $checkout) {

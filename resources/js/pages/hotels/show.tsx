@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { login, register, dashboard } from '@/routes';
 
@@ -70,7 +70,15 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
     }
 
     const startBooking = (roomId: number) => {
-        alert(`Redirecting to secure booking flow for room: ${roomId}. (This is a placeholder for the actual booking checkout page)`);
+        router.visit('/bookings/create', {
+            method: 'get',
+            data: {
+                room_id:   roomId,
+                check_in:  filters.checkin  ?? '',
+                check_out: filters.checkout ?? '',
+                guests:    filters.guests   ?? '1',
+            },
+        });
     };
 
     const seasonBadge: Record<string, { label: string; color: string }> = {

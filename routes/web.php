@@ -8,6 +8,11 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/hotels/search', [SearchController::class, 'index'])->name('hotels.search');
 Route::get('/hotels/{hotel}', [SearchController::class, 'show'])->name('hotels.show');
 
+// Booking flow — open to guests (no auth required)
+Route::get('/bookings/create', [\App\Http\Controllers\BookingController::class, 'create'])->name('bookings.create');
+Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
+Route::get('/bookings/{booking}/pay', [\App\Http\Controllers\BookingController::class, 'pay'])->name('bookings.pay');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['non_admin_dashboard'])->group(function () {
         Route::inertia('dashboard', 'dashboard')->name('dashboard');
