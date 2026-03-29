@@ -33,7 +33,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Partner portal
     Route::prefix('partner')->name('partner.')->middleware(['partner'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Partner\PartnerController::class, 'dashboard'])->name('dashboard');
+        Route::get('/hotels/{hotel}/images', [\App\Http\Controllers\Partner\PartnerHotelController::class, 'images'])->name('hotels.images');
+        Route::post('/hotels/{hotel}/images', [\App\Http\Controllers\Partner\PartnerHotelController::class, 'updateImages'])
+            ->name('hotels.images.update')
+            ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('hotels', \App\Http\Controllers\Partner\PartnerHotelController::class);
+        Route::get('/rooms/{room}/images', [\App\Http\Controllers\Partner\PartnerRoomController::class, 'images'])->name('rooms.images');
+        Route::post('/rooms/{room}/images', [\App\Http\Controllers\Partner\PartnerRoomController::class, 'updateImages'])
+            ->name('rooms.images.update')
+            ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('rooms', \App\Http\Controllers\Partner\PartnerRoomController::class);
     });
 });

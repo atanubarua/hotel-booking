@@ -478,7 +478,7 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
                                 const minP = hotel.rooms_min_price_per_night;
                                 const roomTypes = [...new Set(hotel.rooms?.map(r => r.type) ?? [])];
                                 return (
-                                    <div key={hotel.id} className="hotel-card">
+                                    <div key={hotel.id} className="hotel-card" onClick={() => router.visit(`/hotels/${hotel.id}?checkin=${checkin}&checkout=${checkout}&guests=${filters.guests ?? '1'}`)} role="link" tabIndex={0} onKeyDown={e => e.key === 'Enter' && router.visit(`/hotels/${hotel.id}?checkin=${checkin}&checkout=${checkout}&guests=${filters.guests ?? '1'}`)} style={{ cursor: 'pointer' }}>
                                         <div className="hotel-card-img" style={{ height: 200 }}>
                                             {imgSrc
                                                 ? <img src={imgSrc} alt={hotel.name} loading="lazy" />

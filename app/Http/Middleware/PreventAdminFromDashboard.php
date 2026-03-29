@@ -2,26 +2,25 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Role;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class PreventAdminFromDashboard
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
 
-        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+        if ($user && $user->role === Role::Admin) {
             return redirect('/admin');
+        }
+
+        if ($user && $user->role === Role::Partner) {
+            return redirect('/partner');
         }
 
         return $next($request);
     }
 }
-

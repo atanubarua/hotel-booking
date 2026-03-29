@@ -15,12 +15,12 @@ class SearchController extends Controller
     {
         $request->validate([
             'location' => 'required|string|max:255',
-            'checkin' => 'required|date|after_or_equal:today',
+            'checkin'  => 'required|date|after_or_equal:today',
             'checkout' => 'required|date|after:checkin',
-            'guests' => 'nullable|integer|min:1',
+            'guests'   => 'nullable|integer|min:1',
         ]);
 
-        $guests = (int) $request->input('guests', 1);
+        $guests      = (int) $request->input('guests', 1);
         $pricingDate = $request->input('checkin');
 
         $hotels = Hotel::query()
@@ -30,28 +30,27 @@ class SearchController extends Controller
 
         if ($request->filled('location')) {
             $searchTerm = (string) $request->input('location');
-            $hotels = $hotels->filter(function (Hotel $hotel) use ($searchTerm) {
-                return str_contains(strtolower($hotel->city), strtolower($searchTerm))
-                    || str_contains(strtolower($hotel->name), strtolower($searchTerm));
-            })->values();
+            $hotels = $hotels->filter(fn (Hotel $hotel) =>
+                str_contains(strtolower($hotel->city), strtolower($searchTerm))
+                || str_contains(strtolower($hotel->name), strtolower($searchTerm))
+            )->values();
         }
 
         if ($request->filled('stars')) {
-            $stars = array_map('intval', (array) $request->input('stars'));
+            $stars  = array_map('intval', (array) $request->input('stars'));
             $hotels = $hotels->whereIn('star_rating', $stars)->values();
         }
 
         $hotels = $this->mapHotelsWithEffectivePrices($hotels, $pricingDate, $guests);
 
         if ($request->filled('room_type')) {
-            $types = (array) $request->input('room_type');
+            $types  = (array) $request->input('room_type');
             $hotels = $hotels->map(function (array $hotel) use ($types) {
                 $hotel['rooms'] = array_values(array_filter(
                     $hotel['rooms'],
                     fn (array $room) => in_array($room['type'], $types, true)
                 ));
                 $this->hydrateHotelPriceRange($hotel);
-
                 return $hotel;
             })->filter(fn (array $hotel) => count($hotel['rooms']) > 0)->values();
         }
@@ -61,36 +60,34 @@ class SearchController extends Controller
 
         if ($request->filled('min_price')) {
             $minimum = (float) $request->input('min_price');
-            $hotels = $hotels->map(function (array $hotel) use ($minimum) {
+            $hotels  = $hotels->map(function (array $hotel) use ($minimum) {
                 $hotel['rooms'] = array_values(array_filter(
                     $hotel['rooms'],
                     fn (array $room) => $room['effective_price'] >= $minimum
                 ));
                 $this->hydrateHotelPriceRange($hotel);
-
                 return $hotel;
             })->filter(fn (array $hotel) => count($hotel['rooms']) > 0)->values();
         }
 
         if ($request->filled('max_price')) {
             $maximum = (float) $request->input('max_price');
-            $hotels = $hotels->map(function (array $hotel) use ($maximum) {
+            $hotels  = $hotels->map(function (array $hotel) use ($maximum) {
                 $hotel['rooms'] = array_values(array_filter(
                     $hotel['rooms'],
                     fn (array $room) => $room['effective_price'] <= $maximum
                 ));
                 $this->hydrateHotelPriceRange($hotel);
-
                 return $hotel;
             })->filter(fn (array $hotel) => count($hotel['rooms']) > 0)->values();
         }
 
-        $sort = $request->input('sort', 'recommended');
+        $sort   = $request->input('sort', 'recommended');
         $hotels = match ($sort) {
-            'price_asc' => $hotels->sortBy('rooms_min_price_per_night')->values(),
+            'price_asc'  => $hotels->sortBy('rooms_min_price_per_night')->values(),
             'price_desc' => $hotels->sortByDesc('rooms_min_price_per_night')->values(),
             'stars_desc' => $hotels->sortByDesc('star_rating')->values(),
-            default => $hotels->sortByDesc('star_rating')->values(),
+            default      => $hotels->sortByDesc('star_rating')->values(),
         };
 
         return Inertia::render('hotels/search', [
@@ -104,49 +101,50 @@ class SearchController extends Controller
     public function show(Request $request, Hotel $hotel): Response
     {
         $request->validate([
-            'checkin' => 'nullable|date',
+            'checkin'  => 'nullable|date',
             'checkout' => 'nullable|date|after_or_equal:checkin',
-            'guests' => 'nullable|integer|min:1',
+            'guests'   => 'nullable|integer|min:1',
         ]);
 
-        $hotel->load(['images' => function ($query) {
-            $query->orderBy('order');
-        }]);
+        $hotel->load(['images' => fn ($q) => $q->orderBy('order')]);
 
-        $guests = $request->input('guests', 1);
-        $pricingDate = $request->input('checkin');
+        $guests   = $request->input('guests', 1);
+        $checkin  = $request->input('checkin');
+        $checkout = $request->input('checkout');
 
         $rooms = $hotel->rooms()
             ->where('status', 'available')
             ->where('capacity', '>=', $guests)
-            ->with(['images' => function ($query) {
-                $query->orderBy('order');
-            }, 'priceRules'])
+            ->with(['images' => fn ($q) => $q->orderBy('order'), 'priceRules'])
             ->get();
 
-        $rooms = $rooms->map(function ($room) use ($pricingDate) {
-            $pricing = RoomPricing::resolve($room, $pricingDate);
+        $rooms = $rooms->map(function ($room) use ($checkin, $checkout) {
+            $stay = RoomPricing::resolveStay($room, $checkin, $checkout);
 
             return [
-                'id' => $room->id,
-                'name' => $room->name,
-                'type' => $room->type,
-                'capacity' => $room->capacity,
-                'price_per_night' => $room->price_per_night,
-                'effective_price' => $pricing['effective_price'],
-                'price_rule_name' => $pricing['applied_rule']?->name,
-                'status' => $room->status,
-                'images' => $room->images->map(fn ($image) => [
-                    'id' => $image->id,
-                    'path' => $image->path,
-                    'order' => $image->order,
+                'id'                     => $room->id,
+                'name'                   => $room->name,
+                'type'                   => $room->type,
+                'capacity'               => $room->capacity,
+                'price_per_night'        => (float) $room->price_per_night,
+                'effective_price'        => $stay['avg_price_per_night'],
+                'total_price'            => $stay['total_price'],
+                'nights'                 => $stay['nights'],
+                'price_rule_name'        => $stay['applied_rule']?->name,
+                'price_rule_season_type' => $stay['applied_rule']?->season_type,
+                'breakdown'              => $stay['breakdown'],
+                'status'                 => $room->status,
+                'images'                 => $room->images->map(fn ($img) => [
+                    'id'    => $img->id,
+                    'path'  => $img->path,
+                    'order' => $img->order,
                 ])->values()->all(),
             ];
         })->values();
 
         return Inertia::render('hotels/show', [
-            'hotel' => $hotel,
-            'rooms' => $rooms,
+            'hotel'   => $hotel,
+            'rooms'   => $rooms,
             'filters' => $request->only(['checkin', 'checkout', 'guests']),
         ]);
     }
@@ -160,34 +158,34 @@ class SearchController extends Controller
                     $pricing = RoomPricing::resolve($room, $pricingDate);
 
                     return [
-                        'id' => $room->id,
-                        'name' => $room->name,
-                        'type' => $room->type,
-                        'capacity' => $room->capacity,
-                        'price_per_night' => (float) $room->price_per_night,
-                        'effective_price' => $pricing['effective_price'],
-                        'price_rule_name' => $pricing['applied_rule']?->name,
-                        'status' => $room->status,
+                        'id'               => $room->id,
+                        'name'             => $room->name,
+                        'type'             => $room->type,
+                        'capacity'         => $room->capacity,
+                        'price_per_night'  => (float) $room->price_per_night,
+                        'effective_price'  => $pricing['effective_price'],
+                        'price_rule_name'  => $pricing['applied_rule']?->name,
+                        'status'           => $room->status,
                     ];
                 })
                 ->values()
                 ->all();
 
             $payload = [
-                'id' => $hotel->id,
-                'name' => $hotel->name,
-                'address' => $hotel->address,
-                'city' => $hotel->city,
-                'country' => $hotel->country,
-                'star_rating' => $hotel->star_rating,
-                'description' => $hotel->description,
-                'status' => $hotel->status,
-                'images' => $hotel->images->map(fn ($image) => [
-                    'id' => $image->id,
-                    'path' => $image->path,
-                    'order' => $image->order,
+                'id'                        => $hotel->id,
+                'name'                      => $hotel->name,
+                'address'                   => $hotel->address,
+                'city'                      => $hotel->city,
+                'country'                   => $hotel->country,
+                'star_rating'               => $hotel->star_rating,
+                'description'               => $hotel->description,
+                'status'                    => $hotel->status,
+                'images'                    => $hotel->images->map(fn ($img) => [
+                    'id'    => $img->id,
+                    'path'  => $img->path,
+                    'order' => $img->order,
                 ])->values()->all(),
-                'rooms' => $rooms,
+                'rooms'                     => $rooms,
                 'rooms_min_price_per_night' => null,
                 'rooms_max_price_per_night' => null,
             ];

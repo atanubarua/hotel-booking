@@ -19,13 +19,17 @@ import { Separator } from '@/components/ui/separator';
 import type { PartnerHotel } from '@/types/admin';
 
 export type PriceRuleForm = {
+    id?: number;
     name: string;
+    season_type: 'festival' | 'off_season' | 'peak' | 'weekend' | 'holiday' | 'custom' | '';
     start_date: string;
     end_date: string;
+    days_of_week: number[];
     adjustment_type: 'fixed' | 'percent' | 'amount';
     adjustment_value: string;
     priority: string;
     is_active: boolean;
+    is_stackable: boolean;
 };
 
 export type RoomFormData = {
@@ -66,14 +70,27 @@ type AdminRoomFormProps = {
     activePriceRule?: string | null;
 };
 
+const DAYS = [
+    { label: 'Sun', value: 0 },
+    { label: 'Mon', value: 1 },
+    { label: 'Tue', value: 2 },
+    { label: 'Wed', value: 3 },
+    { label: 'Thu', value: 4 },
+    { label: 'Fri', value: 5 },
+    { label: 'Sat', value: 6 },
+];
+
 const emptyRule = (): PriceRuleForm => ({
     name: '',
+    season_type: '',
     start_date: '',
     end_date: '',
+    days_of_week: [],
     adjustment_type: 'percent',
     adjustment_value: '',
     priority: '1',
     is_active: true,
+    is_stackable: false,
 });
 
 export function AdminRoomForm({
@@ -247,13 +264,66 @@ export function AdminRoomForm({
                                             </div>
 
                                             <div className="flex flex-col gap-1.5">
-                                                <Label>Start Date</Label>
+                                                <Label>Season Type</Label>
+                                                <Select value={rule.season_type} onValueChange={(value: PriceRuleForm['season_type']) => updateRule(index, 'season_type', value)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select type" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="festival">🎉 Festival</SelectItem>
+                                                        <SelectItem value="peak">📈 Peak Season</SelectItem>
+                                                        <SelectItem value="off_season">📉 Off Season</SelectItem>
+                                                        <SelectItem value="weekend">📅 Weekend</SelectItem>
+                                                        <SelectItem value="holiday">🏖️ Holiday</SelectItem>
+                                                        <SelectItem value="custom">⚙️ Custom</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {errorForRule(index, 'season_type') && <p className="text-destructive text-sm">{errorForRule(index, 'season_type')}</p>}
+                                            </div>
+
+                                            <div className="flex flex-col gap-1.5 md:col-span-2 xl:col-span-3">
+                                                <Label>Days of Week <span className="text-muted-foreground font-normal">(leave empty to use date range only)</span></Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {DAYS.map((day) => {
+                                                        const checked = rule.days_of_week.includes(day.value);
+                                                        return (
+                                                            <button
+                                                                key={day.value}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const next = checked
+                                                                        ? rule.days_of_week.filter((d) => d !== day.value)
+                                                                        : [...rule.days_of_week, day.value].sort((a, b) => a - b);
+                                                                    updateRule(index, 'days_of_week', next);
+                                                                }}
+                                                                className={`rounded-md border px-3 py-1 text-sm font-medium transition-colors ${
+                                                                    checked
+                                                                        ? 'bg-primary text-primary-foreground border-primary'
+                                                                        : 'bg-background text-foreground hover:bg-muted'
+                                                                }`}
+                                                            >
+                                                                {day.label}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {errorForRule(index, 'days_of_week') && <p className="text-destructive text-sm">{errorForRule(index, 'days_of_week')}</p>}
+                                            </div>
+
+                                            <div className="flex flex-col gap-1.5">
+                                                <Label>
+                                                    Start Date
+                                                    {rule.days_of_week.length > 0 && <span className="text-muted-foreground font-normal"> (optional boundary)</span>}
+                                                </Label>
                                                 <Input type="date" value={rule.start_date} onChange={(event) => updateRule(index, 'start_date', event.target.value)} />
                                                 {errorForRule(index, 'start_date') && <p className="text-destructive text-sm">{errorForRule(index, 'start_date')}</p>}
                                             </div>
 
                                             <div className="flex flex-col gap-1.5">
-                                                <Label>End Date</Label>
+                                                <Label>
+                                                    End Date
+                                                    {rule.days_of_week.length > 0 && <span className="text-muted-foreground font-normal"> (optional boundary)</span>}
+                                                </Label>
                                                 <Input type="date" value={rule.end_date} onChange={(event) => updateRule(index, 'end_date', event.target.value)} />
                                                 {errorForRule(index, 'end_date') && <p className="text-destructive text-sm">{errorForRule(index, 'end_date')}</p>}
                                             </div>
@@ -306,10 +376,24 @@ export function AdminRoomForm({
 
                                         <Separator className="my-4" />
 
-                                        <label className="flex items-center gap-3 text-sm font-medium">
-                                            <Checkbox checked={rule.is_active} onCheckedChange={(checked) => updateRule(index, 'is_active', checked === true)} />
-                                            Rule is active
-                                        </label>
+                                        <div className="flex items-center gap-6">
+                                            <label className="flex items-center gap-3 text-sm font-medium">
+                                                <Checkbox checked={rule.is_active} onCheckedChange={(checked) => updateRule(index, 'is_active', checked === true)} />
+                                                Rule is active
+                                            </label>
+                                            <label className={`flex items-center gap-3 text-sm font-medium ${rule.adjustment_type === 'fixed' ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                                                <Checkbox
+                                                    checked={rule.is_stackable}
+                                                    disabled={rule.adjustment_type === 'fixed'}
+                                                    onCheckedChange={(checked) => updateRule(index, 'is_stackable', checked === true)}
+                                                />
+                                                Stack with other rules
+                                            </label>
+                                        </div>
+                                        {rule.adjustment_type === 'fixed' && (
+                                            <p className="text-muted-foreground mt-2 text-xs">Fixed price rules cannot be stacked.</p>
+                                        )}
+                                        {errorForRule(index, 'is_stackable') && <p className="text-destructive text-sm">{errorForRule(index, 'is_stackable')}</p>}
                                     </div>
                                 ))}
                             </div>

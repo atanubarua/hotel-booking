@@ -74,7 +74,7 @@ export default function PartnerHotelsCreate() {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-3xl">
+                <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6 max-w-5xl mx-auto">
                     <div className="rounded-lg border bg-card p-6 shadow-sm">
                         <h2 className="mb-4 text-lg font-medium">Hotel Information</h2>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

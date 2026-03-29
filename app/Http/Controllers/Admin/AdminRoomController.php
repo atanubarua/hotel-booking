@@ -277,28 +277,34 @@ class AdminRoomController extends Controller
 
     private function syncPriceRules(Request $request, Room $room): void
     {
-        $rules = collect($request->input('price_rules', []))
-            ->filter(fn ($rule) => filled($rule['name'] ?? null))
-            ->map(function ($rule) {
-                return [
-                    'name' => $rule['name'],
-                    'start_date' => $rule['start_date'],
-                    'end_date' => $rule['end_date'],
-                    'adjustment_type' => $rule['adjustment_type'],
-                    'adjustment_value' => $rule['adjustment_value'],
-                    'priority' => max((int) ($rule['priority'] ?? 1), 1),
-                    'is_active' => filter_var($rule['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
-                ];
-            })
-            ->values();
+        $incoming = collect($request->input('price_rules', []))
+            ->filter(fn ($rule) => filled($rule['name'] ?? null));
 
-        $room->priceRules()->delete();
+        $incomingIds = $incoming->pluck('id')->filter()->values();
 
-        if ($rules->isEmpty()) {
-            return;
+        // Delete rules that were removed in the form
+        $room->priceRules()->whereNotIn('id', $incomingIds)->delete();
+
+        foreach ($incoming as $rule) {
+            $payload = [
+                'name'             => $rule['name'],
+                'season_type'      => $rule['season_type'] ?? null,
+                'start_date'       => $rule['start_date'] ?? null,
+                'end_date'         => $rule['end_date'] ?? null,
+                'days_of_week'     => ! empty($rule['days_of_week']) ? array_values(array_map('intval', $rule['days_of_week'])) : null,
+                'adjustment_type'  => $rule['adjustment_type'],
+                'adjustment_value' => $rule['adjustment_value'],
+                'priority'         => max((int) ($rule['priority'] ?? 1), 1),
+                'is_active'        => filter_var($rule['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'is_stackable'     => filter_var($rule['is_stackable'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+
+            if (!empty($rule['id'])) {
+                $room->priceRules()->where('id', $rule['id'])->update($payload);
+            } else {
+                $room->priceRules()->create($payload);
+            }
         }
-
-        $room->priceRules()->createMany($rules->all());
     }
 
     private function transformRoomForForm(Room $room): array
@@ -321,13 +327,17 @@ class AdminRoomController extends Controller
                 'order' => $image->order,
             ])->values()->all(),
             'price_rules' => $room->priceRules->map(fn ($rule) => [
-                'name' => $rule->name,
-                'start_date' => $rule->start_date->format('Y-m-d'),
-                'end_date' => $rule->end_date->format('Y-m-d'),
-                'adjustment_type' => $rule->adjustment_type,
+                'id'               => $rule->id,
+                'name'             => $rule->name,
+                'season_type'      => $rule->season_type,
+                'start_date'       => $rule->start_date?->format('Y-m-d'),
+                'end_date'         => $rule->end_date?->format('Y-m-d'),
+                'days_of_week'     => $rule->days_of_week ?? [],
+                'adjustment_type'  => $rule->adjustment_type,
                 'adjustment_value' => (string) $rule->adjustment_value,
-                'priority' => $rule->priority,
-                'is_active' => $rule->is_active,
+                'priority'         => $rule->priority,
+                'is_active'        => $rule->is_active,
+                'is_stackable'     => $rule->is_stackable,
             ])->values()->all(),
         ];
     }
