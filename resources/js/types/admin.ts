@@ -75,10 +75,21 @@ export type PartnerRoom = {
     type: 'Standard' | 'Deluxe' | 'Suite';
     capacity: number;
     price_per_night: number;
+    effective_price?: number;
+    active_price_rule?: string | null;
     status: 'available' | 'occupied' | 'maintenance';
     created_at: string;
     serial: number;
     images: HotelImageType[];
+    price_rules?: {
+        name: string;
+        start_date: string;
+        end_date: string;
+        adjustment_type: 'fixed' | 'percent' | 'amount';
+        adjustment_value: string;
+        priority: number;
+        is_active: boolean;
+    }[];
 };
 
 export type PaginatedHotels = {

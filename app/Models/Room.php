@@ -26,4 +26,11 @@ class Room extends Model
     {
         return $this->hasMany(RoomImage::class)->orderBy('order');
     }
+
+    public function priceRules(): HasMany
+    {
+        return $this->hasMany(RoomPriceRule::class)
+            ->orderByDesc('priority')
+            ->orderBy('start_date');
+    }
 }

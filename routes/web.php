@@ -26,7 +26,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/rooms/{room}/images', [\App\Http\Controllers\Admin\AdminRoomController::class, 'updateImages'])
             ->name('rooms.images.update')
             ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
-        Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['create', 'edit', 'show']);
+        Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['show']);
         Route::get('/bookings', [\App\Http\Controllers\Admin\AdminController::class, 'bookings'])->name('bookings.index');
     });
 

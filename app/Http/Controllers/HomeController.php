@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Hotel;
+use App\Support\RoomPricing;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,8 +14,7 @@ class HomeController extends Controller
     {
         $query = Hotel::query()
             ->where('status', 'active')
-            ->with(['images', 'rooms'])
-            ->withMin('rooms', 'price_per_night');
+            ->with(['images', 'rooms.priceRules']);
 
         if ($request->filled('location')) {
             $searchTerm = (string) $request->input('location');
@@ -30,6 +30,15 @@ class HomeController extends Controller
         } else {
             $hotels = $query->orderBy('star_rating', 'desc')->limit(6)->get();
         }
+
+        $pricingDate = $request->input('checkin');
+
+        $hotels = $hotels->map(function (Hotel $hotel) use ($pricingDate) {
+            $prices = $hotel->rooms->map(fn ($room) => RoomPricing::resolve($room, $pricingDate)['effective_price']);
+            $hotel->rooms_min_price_per_night = $prices->min();
+
+            return $hotel;
+        });
 
         return Inertia::render('welcome', [
             'hotels' => $hotels,

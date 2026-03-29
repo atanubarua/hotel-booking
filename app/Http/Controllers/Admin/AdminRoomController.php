@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\UpdateRoomRequest;
 use App\Models\Hotel;
-use App\Models\HotelImage;
 use App\Models\Room;
 use App\Models\RoomImage;
+use App\Support\RoomPricing;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +23,7 @@ class AdminRoomController extends Controller
     public function index(Request $request): Response
     {
         $query = Room::query()
-            ->with(['hotel', 'images'])
+            ->with(['hotel', 'images', 'priceRules'])
             ->join('hotels', 'rooms.hotel_id', '=', 'hotels.id')
             ->select('rooms.*', 'hotels.name as hotel_name');
 
@@ -49,6 +49,8 @@ class AdminRoomController extends Controller
         // Transform room data for the frontend
         $pageStart = ($rooms->currentPage() - 1) * $rooms->perPage();
         $rooms->getCollection()->transform(function ($room, $index) use ($pageStart) {
+            $pricing = RoomPricing::resolve($room);
+
             return [
                 'id' => $room->id,
                 'hotel_id' => $room->hotel_id,
@@ -57,6 +59,8 @@ class AdminRoomController extends Controller
                 'type' => $room->type,
                 'capacity' => $room->capacity,
                 'price_per_night' => $room->price_per_night,
+                'effective_price' => $pricing['effective_price'],
+                'active_price_rule' => $pricing['applied_rule']?->name,
                 'status' => $room->status,
                 'created_at' => $room->created_at,
                 'serial' => $pageStart + $index + 1,
@@ -83,68 +87,51 @@ class AdminRoomController extends Controller
         ]);
     }
 
+    public function create(Request $request): Response
+    {
+        $hotels = Hotel::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('admin/rooms/create', [
+            'hotels' => $hotels,
+            'selectedHotelId' => $request->integer('hotel') ?: null,
+        ]);
+    }
+
     public function store(StoreRoomRequest $request): RedirectResponse
     {
-        $hotel = Hotel::findOrFail($request->hotel_id);
+        $room = DB::transaction(function () use ($request) {
+            $room = Room::create($this->roomPayload($request));
 
-        $room = Room::create([
-            'hotel_id'        => $request->hotel_id,
-            'name'            => $request->name,
-            'type'            => $request->type,
-            'capacity'        => $request->capacity,
-            'price_per_night' => $request->price_per_night,
-            'status'          => $request->status,
-        ]);
+            $this->syncImages($request, $room);
+            $this->syncPriceRules($request, $room);
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $order => $image) {
-                $path = $image->store('rooms', 'public');
-                RoomImage::create([
-                    'room_id' => $room->id,
-                    'path'    => $path,
-                    'order'   => $order,
-                ]);
-            }
-        }
+            return $room;
+        });
 
         return redirect()->route('admin.rooms.index')
             ->with('success', 'Room created successfully.');
     }
 
+    public function edit(Room $room): Response
+    {
+        $room->load(['hotel', 'images', 'priceRules']);
+
+        $hotels = Hotel::orderBy('name')->get(['id', 'name']);
+
+        return Inertia::render('admin/rooms/edit', [
+            'room' => $this->transformRoomForForm($room),
+            'hotels' => $hotels,
+        ]);
+    }
+
     public function update(UpdateRoomRequest $request, Room $room): RedirectResponse
     {
-        $room->update([
-            'hotel_id'        => $request->hotel_id,
-            'name'            => $request->name,
-            'type'            => $request->type,
-            'capacity'        => $request->capacity,
-            'price_per_night' => $request->price_per_night,
-            'status'          => $request->status,
-        ]);
+        DB::transaction(function () use ($request, $room) {
+            $room->update($this->roomPayload($request));
 
-        // Delete requested images
-        if ($request->delete_images) {
-            foreach ($request->delete_images as $imageId) {
-                $img = RoomImage::where('id', $imageId)->where('room_id', $room->id)->first();
-                if ($img) {
-                    Storage::disk('public')->delete($img->path);
-                    $img->delete();
-                }
-            }
-        }
-
-        // Store new images
-        if ($request->hasFile('images')) {
-            $maxOrder = $room->images()->max('order') ?? -1;
-            foreach ($request->file('images') as $i => $image) {
-                $path = $image->store('rooms', 'public');
-                RoomImage::create([
-                    'room_id' => $room->id,
-                    'path'    => $path,
-                    'order'   => $maxOrder + 1 + $i,
-                ]);
-            }
-        }
+            $this->syncImages($request, $room);
+            $this->syncPriceRules($request, $room);
+        });
 
         return redirect()->route('admin.rooms.index')
             ->with('success', 'Room updated successfully.');
@@ -246,5 +233,102 @@ class AdminRoomController extends Controller
         } catch (Exception $e) {
             return back()->with('error', 'Failed to update images. Please try again.');
         }
+    }
+
+    private function roomPayload(Request $request): array
+    {
+        return [
+            'hotel_id' => $request->integer('hotel_id'),
+            'name' => $request->string('name')->toString(),
+            'type' => $request->string('type')->toString(),
+            'capacity' => $request->integer('capacity'),
+            'price_per_night' => $request->input('price_per_night'),
+            'status' => $request->string('status')->toString(),
+        ];
+    }
+
+    private function syncImages(Request $request, Room $room): void
+    {
+        if ($request->delete_images) {
+            foreach ($request->delete_images as $imageId) {
+                $img = RoomImage::where('id', $imageId)->where('room_id', $room->id)->first();
+                if ($img) {
+                    Storage::disk('public')->delete($img->path);
+                    $img->delete();
+                }
+            }
+        }
+
+        if (! $request->hasFile('images')) {
+            return;
+        }
+
+        $maxOrder = $room->images()->max('order') ?? -1;
+
+        foreach ($request->file('images') as $i => $image) {
+            $path = $image->store('rooms', 'public');
+            RoomImage::create([
+                'room_id' => $room->id,
+                'path' => $path,
+                'order' => $maxOrder + 1 + $i,
+            ]);
+        }
+    }
+
+    private function syncPriceRules(Request $request, Room $room): void
+    {
+        $rules = collect($request->input('price_rules', []))
+            ->filter(fn ($rule) => filled($rule['name'] ?? null))
+            ->map(function ($rule) {
+                return [
+                    'name' => $rule['name'],
+                    'start_date' => $rule['start_date'],
+                    'end_date' => $rule['end_date'],
+                    'adjustment_type' => $rule['adjustment_type'],
+                    'adjustment_value' => $rule['adjustment_value'],
+                    'priority' => max((int) ($rule['priority'] ?? 1), 1),
+                    'is_active' => filter_var($rule['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                ];
+            })
+            ->values();
+
+        $room->priceRules()->delete();
+
+        if ($rules->isEmpty()) {
+            return;
+        }
+
+        $room->priceRules()->createMany($rules->all());
+    }
+
+    private function transformRoomForForm(Room $room): array
+    {
+        $pricing = RoomPricing::resolve($room);
+
+        return [
+            'id' => $room->id,
+            'hotel_id' => $room->hotel_id,
+            'name' => $room->name,
+            'type' => $room->type,
+            'capacity' => $room->capacity,
+            'price_per_night' => $room->price_per_night,
+            'status' => $room->status,
+            'effective_price' => $pricing['effective_price'],
+            'active_price_rule' => $pricing['applied_rule']?->name,
+            'images' => $room->images->map(fn ($image) => [
+                'id' => $image->id,
+                'path' => $image->path,
+                'order' => $image->order,
+            ])->values()->all(),
+            'price_rules' => $room->priceRules->map(fn ($rule) => [
+                'name' => $rule->name,
+                'start_date' => $rule->start_date->format('Y-m-d'),
+                'end_date' => $rule->end_date->format('Y-m-d'),
+                'adjustment_type' => $rule->adjustment_type,
+                'adjustment_value' => (string) $rule->adjustment_value,
+                'priority' => $rule->priority,
+                'is_active' => $rule->is_active,
+            ])->values()->all(),
+        ];
     }
 }

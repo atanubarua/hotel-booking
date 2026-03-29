@@ -3,7 +3,17 @@ import { useState } from 'react';
 import { login, register, dashboard } from '@/routes';
 
 interface Image { id: number; path: string; order: number; }
-interface Room { id: number; name: string; type: string; capacity: number; price_per_night: number; status: string; images: Image[]; }
+interface Room {
+    id: number;
+    name: string;
+    type: string;
+    capacity: number;
+    price_per_night: number;
+    effective_price: number;
+    price_rule_name?: string | null;
+    status: string;
+    images: Image[];
+}
 interface Hotel { id: number; name: string; address: string; city: string; country: string; star_rating: number; description: string; status: string; images: Image[]; }
 interface Filters { checkin?: string; checkout?: string; guests?: string; }
 interface Props { hotel: Hotel; rooms: Room[]; filters: Filters; }
@@ -179,7 +189,7 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
                     {rooms.length > 0 && (
                         <div className="price-highlight">
                             <div className="label">Reserve from</div>
-                            <div className="price">৳{Math.min(...rooms.map(r => r.price_per_night)).toLocaleString()}</div>
+                            <div className="price">Tk {Math.min(...rooms.map((room) => room.effective_price)).toLocaleString()}</div>
                             <div className="sub">per night</div>
                         </div>
                     )}
@@ -280,8 +290,12 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
 
                                         <div className="room-footer">
                                             <div className="room-price-info">
-                                                <div className="room-price">৳{room.price_per_night.toLocaleString()}</div>
-                                                <div className="room-p-sub">Includes taxes and charges</div>
+                                                <div className="room-price">Tk {room.effective_price.toLocaleString()}</div>
+                                                <div className="room-p-sub">
+                                                    {room.price_rule_name
+                                                        ? `${room.price_rule_name} applied`
+                                                        : 'Includes taxes and charges'}
+                                                </div>
                                             </div>
                                             <button className="btn-book" onClick={() => startBooking(room.id)}>
                                                 Reserve Now 
