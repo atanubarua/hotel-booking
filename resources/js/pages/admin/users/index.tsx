@@ -1,5 +1,5 @@
-import { Head } from '@inertiajs/react';
-import { PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Building2Icon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { DataTable } from '@/components/admin/data-table';
@@ -22,11 +22,10 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
-import { staticUsers } from '@/data/admin-static';
 import type { AdminUser, UserRole } from '@/types/admin';
 import type { BreadcrumbItem } from '@/types';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 15;
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Admin', href: '/admin' },
     { title: 'User Management', href: '/admin/users' },
@@ -38,8 +37,12 @@ const roleOptions: { value: UserRole; label: string }[] = [
     { value: 'customer', label: 'Customer' },
 ];
 
-export default function AdminUsersIndex() {
-    const [users, setUsers] = useState<AdminUser[]>(() => [...staticUsers]);
+interface Props {
+    users: AdminUser[];
+}
+
+export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
+    const [users, setUsers] = useState<AdminUser[]>(() => [...initialUsers]);
     const [searchInput, setSearchInput] = useState('');
     const [appliedSearch, setAppliedSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -198,6 +201,19 @@ export default function AdminUsersIndex() {
                             label: 'Actions',
                             render: (u) => (
                                 <div className="flex gap-2">
+                                    {u.role === 'partner' && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-8"
+                                            title="View partner hotels"
+                                            asChild
+                                        >
+                                            <Link href={`/admin/hotels?partner=${u.id}`}>
+                                                <Building2Icon className="size-4" />
+                                            </Link>
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="icon"

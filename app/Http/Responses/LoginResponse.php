@@ -2,6 +2,7 @@
 
 namespace App\Http\Responses;
 
+use App\Enums\Role;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
 class LoginResponse implements LoginResponseContract
@@ -15,8 +16,10 @@ class LoginResponse implements LoginResponseContract
 
         $intended = '/dashboard';
 
-        if ($user && ($user->role ?? null) === 'admin') {
+        if ($user?->role === Role::Admin) {
             $intended = '/admin';
+        } elseif ($user?->role === Role::Partner) {
+            $intended = '/partner';
         }
 
         return redirect()->intended($intended);

@@ -15,7 +15,21 @@ class AdminController extends Controller
 
     public function users(): Response
     {
-        return Inertia::render('admin/users/index');
+        $users = \App\Models\User::latest()->get()->map(function ($user) {
+            return [
+                'id' => (string) $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->value ?? (string) $user->role,
+                'phone' => '+1 555-0000',
+                'status' => 'active',
+                'createdAt' => $user->created_at ? $user->created_at->format('Y-m-d') : now()->format('Y-m-d'),
+            ];
+        });
+
+        return Inertia::render('admin/users/index', [
+            'users' => $users
+        ]);
     }
 
     public function hotels(): Response

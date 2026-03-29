@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PreventAdminFromDashboard;
+use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'non_admin_dashboard' => PreventAdminFromDashboard::class,
+            'partner' => \App\Http\Middleware\EnsurePartner::class,
+            'admin' => EnsureAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

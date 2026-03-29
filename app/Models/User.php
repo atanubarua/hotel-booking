@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -57,5 +58,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
+    }
+
+    public function hotels(): HasMany
+    {
+        return $this->hasMany(Hotel::class);
+    }
+
+    public function isPartner(): bool
+    {
+        return $this->role === Role::Partner;
     }
 }

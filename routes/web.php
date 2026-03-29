@@ -1,24 +1,39 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Admin\HotelController;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/hotels/search', [SearchController::class, 'index'])->name('hotels.search');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['non_admin_dashboard'])->group(function () {
         Route::inertia('dashboard', 'dashboard')->name('dashboard');
     });
 
-    // Admin dashboard (Booking.com / Oyo-style admin)
-    Route::prefix('admin')->name('admin.')->group(function () {
+    // Admin dashboard
+    Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/users', [\App\Http\Controllers\Admin\AdminController::class, 'users'])->name('users.index');
-        Route::get('/hotels', [\App\Http\Controllers\Admin\AdminController::class, 'hotels'])->name('hotels.index');
-        Route::get('/rooms', [\App\Http\Controllers\Admin\AdminController::class, 'rooms'])->name('rooms.index');
+        Route::get('/hotels/{hotel}/images', [HotelController::class, 'images'])->name('hotels.images');
+        Route::post('/hotels/{hotel}/images', [HotelController::class, 'updateImages'])
+            ->name('hotels.images.update')
+            ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
+        Route::resource('hotels', HotelController::class);
+        Route::get('/rooms/{room}/images', [\App\Http\Controllers\Admin\AdminRoomController::class, 'images'])->name('rooms.images');
+        Route::post('/rooms/{room}/images', [\App\Http\Controllers\Admin\AdminRoomController::class, 'updateImages'])
+            ->name('rooms.images.update')
+            ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
+        Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['create', 'edit', 'show']);
         Route::get('/bookings', [\App\Http\Controllers\Admin\AdminController::class, 'bookings'])->name('bookings.index');
+    });
+
+    // Partner portal
+    Route::prefix('partner')->name('partner.')->middleware(['partner'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Partner\PartnerController::class, 'dashboard'])->name('dashboard');
+        Route::resource('hotels', \App\Http\Controllers\Partner\PartnerHotelController::class);
+        Route::resource('rooms', \App\Http\Controllers\Partner\PartnerRoomController::class);
     });
 });
 
