@@ -11,6 +11,12 @@ class SearchController extends Controller
 {
     public function index(Request $request): Response
     {
+        $request->validate([
+            'location' => 'required|string|max:255',
+            'checkin' => 'required|date|after_or_equal:today',
+            'checkout' => 'required|date|after:checkin',
+        ]);
+
         $query = Hotel::query()
             ->where('status', 'active')
             ->with(['images', 'rooms'])

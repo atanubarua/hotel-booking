@@ -70,12 +70,19 @@ const destinations = [
     { city: 'Sundarbans', label: 'Sundarbans', emoji: '🐅', subtitle: 'Mangrove Forest' },
 ];
 
+const getToday = () => new Date().toISOString().split('T')[0];
+const getTomorrow = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+};
+
 export default function Welcome({ hotels = [], filters = {}, canRegister = true }: WelcomeProps) {
     const { auth } = usePage<{ auth: { user: { name: string } | null } }>().props;
 
     const [location, setLocation] = useState(filters.location ?? '');
-    const [checkin, setCheckin] = useState(filters.checkin ?? '');
-    const [checkout, setCheckout] = useState(filters.checkout ?? '');
+    const [checkin, setCheckin] = useState(filters.checkin || getToday());
+    const [checkout, setCheckout] = useState(filters.checkout || getTomorrow());
     const [guests, setGuests] = useState(filters.guests ?? '1');
 
     const handleSearch = (e: FormEvent) => {
@@ -84,6 +91,10 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
     };
 
     const handleDestinationClick = (city: string) => {
+        if (!checkin || !checkout) {
+            alert('Please select your Check-in and Check-out dates before searching a destination.');
+            return;
+        }
         setLocation(city);
         router.get('/hotels/search', { location: city, checkin, checkout, guests });
     };
@@ -573,6 +584,7 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                                 placeholder="Where are you going?"
                                 value={location}
                                 onChange={(e) => setLocation(e.target.value)}
+                                required
                             />
                         </div>
                         <div className="search-field">
@@ -583,6 +595,7 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                                 value={checkin}
                                 onChange={(e) => setCheckin(e.target.value)}
                                 min={new Date().toISOString().split('T')[0]}
+                                required
                             />
                         </div>
                         <div className="search-field">
@@ -593,6 +606,7 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                                 value={checkout}
                                 onChange={(e) => setCheckout(e.target.value)}
                                 min={checkin || new Date().toISOString().split('T')[0]}
+                                required
                             />
                         </div>
                         <div className="search-field">

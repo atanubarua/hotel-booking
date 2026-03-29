@@ -41,13 +41,20 @@ const SORT_OPTIONS = [
 const ROOM_TYPES = ['Standard', 'Deluxe', 'Suite'];
 const STAR_OPTIONS = [5, 4, 3, 2, 1];
 
+const getToday = () => new Date().toISOString().split('T')[0];
+const getTomorrow = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+};
+
 export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Props) {
     const { auth } = usePage<{ auth: { user: { name: string } | null } }>().props;
 
     // Search bar state
     const [location, setLocation] = useState(filters.location ?? '');
-    const [checkin, setCheckin] = useState(filters.checkin ?? '');
-    const [checkout, setCheckout] = useState(filters.checkout ?? '');
+    const [checkin, setCheckin] = useState(filters.checkin || getToday());
+    const [checkout, setCheckout] = useState(filters.checkout || getTomorrow());
     const [guests, setGuests] = useState(filters.guests ?? '1');
 
     // Filter state
