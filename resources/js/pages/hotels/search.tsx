@@ -519,7 +519,7 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
                                                 <div className="room-count">
                                                     {hotel.rooms?.length ?? 0} room type{hotel.rooms?.length !== 1 ? 's' : ''} available
                                                 </div>
-                                                <a href="#" className="btn-view">View Details →</a>
+                                                <Link href={`/hotels/${hotel.id}?checkin=${checkin}&checkout=${checkout}&guests=${filters.guests ?? '1'}`} className="btn-view">View Details →</Link>
                                             </div>
                                         </div>
                                     </div>

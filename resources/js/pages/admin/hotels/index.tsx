@@ -1,10 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Bed, ImageIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { Bed, ImageIcon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { DataTable } from '@/components/admin/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -32,6 +36,7 @@ export default function AdminHotelsIndex() {
 
     const [searchInput, setSearchInput] = useState(filters.search ?? '');
     const [deleteTarget, setDeleteTarget] = useState<AdminHotel | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     function applySearch() {
         router.get(
@@ -122,14 +127,20 @@ export default function AdminHotelsIndex() {
                             label: 'Image',
                             render: (h) => (
                                 h.images && h.images.length > 0 ? (
-                                    <img
-                                        src={h.images[0].path.startsWith('http') ? h.images[0].path : `/storage/${h.images[0].path}`}
-                                        alt={h.name}
-                                        className="h-12 w-12 rounded-lg object-cover border"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                        }}
-                                    />
+                                    <button
+                                        onClick={() => setPreviewImage(h.images[0].path.startsWith('http') ? h.images[0].path : `/storage/${h.images[0].path}`)}
+                                        className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded-lg"
+                                        title="Click to preview"
+                                    >
+                                        <img
+                                            src={h.images[0].path.startsWith('http') ? h.images[0].path : `/storage/${h.images[0].path}`}
+                                            alt={h.name}
+                                            className="h-12 w-12 rounded-lg object-cover border hover:opacity-80 transition-opacity"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
+                                    </button>
                                 ) : (
                                     <div className="h-12 w-12 rounded-lg border border-dashed bg-muted flex items-center justify-center">
                                         <span className="text-muted-foreground text-xs">No image</span>
@@ -226,6 +237,28 @@ export default function AdminHotelsIndex() {
                     variant="destructive"
                     onConfirm={confirmDelete}
                 />
+
+                {/* Image Preview Modal */}
+                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+                        <div className="relative">
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                                title="Close"
+                            >
+                                <XIcon className="size-5" />
+                            </button>
+                            {previewImage && (
+                                <img
+                                    src={previewImage}
+                                    alt="Hotel preview"
+                                    className="max-w-full max-h-[85vh] rounded-lg object-contain"
+                                />
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     );

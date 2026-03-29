@@ -114,7 +114,7 @@ export default function PartnerRoomsCreate() {
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <Label htmlFor="price_per_night">Price per Night ($)</Label>
+                                <Label htmlFor="price_per_night">Price per Night (Tk)</Label>
                                 <Input id="price_per_night" type="number" min={0} step={0.01} value={form.data.price_per_night} onChange={(e) => form.setData('price_per_night', e.target.value)} placeholder="0.00" />
                                 {form.errors.price_per_night && <p className="text-destructive text-sm">{form.errors.price_per_night}</p>}
                             </div>

@@ -21,7 +21,7 @@ export default function PartnerDashboard() {
         { title: 'My Hotels', value: hotelCount, icon: Building2 },
         { title: 'Total Rooms', value: roomCount, icon: Bed },
         { title: 'Active Bookings', value: 0, icon: CalendarCheck },
-        { title: 'Revenue This Month', value: '$0', icon: DollarSign },
+        { title: 'Revenue This Month', value: '৳0', icon: DollarSign },
     ];
 
     return (

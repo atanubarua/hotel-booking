@@ -64,8 +64,7 @@ export function ImageUploader({
                                         alt="Hotel image"
                                         className="h-24 w-24 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition-opacity"
                                         onError={(e) => {
-                                            // Fallback for broken images
-                                            e.currentTarget.src = imageUrl;
+                                            e.currentTarget.src = 'https://placehold.co/400x400?text=Error';
                                         }}
                                     />
                                 </a>

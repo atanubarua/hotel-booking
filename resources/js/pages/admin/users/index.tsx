@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Building2Icon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -20,12 +20,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
 import type { AdminUser, UserRole } from '@/types/admin';
 import type { BreadcrumbItem } from '@/types';
 
-const PAGE_SIZE = 15;
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Admin', href: '/admin' },
     { title: 'User Management', href: '/admin/users' },
@@ -37,15 +37,26 @@ const roleOptions: { value: UserRole; label: string }[] = [
     { value: 'customer', label: 'Customer' },
 ];
 
-interface Props {
-    users: AdminUser[];
+interface PaginationInfo {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
 }
 
-export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
-    const [users, setUsers] = useState<AdminUser[]>(() => [...initialUsers]);
-    const [searchInput, setSearchInput] = useState('');
-    const [appliedSearch, setAppliedSearch] = useState('');
-    const [page, setPage] = useState(1);
+interface Props {
+    users: AdminUser[];
+    hotels: { id: string; name: string }[];
+    pagination: PaginationInfo;
+}
+
+export default function AdminUsersIndex({ users = [], hotels: allHotels = [], pagination }: Props) {
+    const { url } = usePage();
+    const searchParams = new URL(url, 'http://localhost').searchParams;
+
+    const [searchInput, setSearchInput] = useState(searchParams.get('search') || '');
+    const [appliedSearch, setAppliedSearch] = useState(searchParams.get('search') || '');
+    const [hotelFilter, setHotelFilter] = useState(searchParams.get('hotel') || 'all');
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
     const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -57,22 +68,37 @@ export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
         status: 'active' as 'active' | 'inactive' | 'pending',
     });
 
-    const filtered = useMemo(() => {
-        const q = appliedSearch.toLowerCase().trim();
-        if (!q) return users;
-        return users.filter(
-            (u) =>
-                u.name.toLowerCase().includes(q) ||
-                u.email.toLowerCase().includes(q) ||
-                u.role.toLowerCase().includes(q)
-        );
-    }, [users, appliedSearch]);
+    const page = pagination.current_page;
+    const totalCount = pagination.total;
 
-    const totalCount = filtered.length;
-    const paginated = useMemo(() => {
-        const start = (page - 1) * PAGE_SIZE;
-        return filtered.slice(start, start + PAGE_SIZE);
-    }, [filtered, page]);
+    const handlePageChange = (newPage: number) => {
+        router.get('/admin/users', {
+            page: newPage,
+            search: appliedSearch,
+            hotel: hotelFilter,
+        }, { preserveState: true });
+    };
+
+    const handleSearch = () => {
+        setAppliedSearch(searchInput);
+        router.get('/admin/users', {
+            page: 1,
+            search: searchInput,
+            hotel: hotelFilter,
+        }, { preserveState: true });
+    };
+
+    const handleHotelFilterChange = (hotelId: string) => {
+        setHotelFilter(hotelId);
+        router.get('/admin/users', {
+            page: 1,
+            search: appliedSearch,
+            hotel: hotelId,
+        }, { preserveState: true });
+    };
+
+    // Hotels are now passed from the server
+    const hotels = allHotels;
 
     const openCreate = () => {
         setEditing(null);
@@ -99,36 +125,16 @@ export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
     };
 
     const handleSave = () => {
-        if (editing) {
-            setUsers((prev) =>
-                prev.map((u) =>
-                    u.id === editing.id
-                        ? {
-                              ...u,
-                              ...form,
-                              id: u.id,
-                              createdAt: u.createdAt,
-                          }
-                        : u
-                )
-            );
-        } else {
-            setUsers((prev) => [
-                ...prev,
-                {
-                    id: String(prev.length + 1),
-                    ...form,
-                    createdAt: new Date().toISOString().slice(0, 10),
-                },
-            ]);
-        }
+        // For demo purposes, just close the modal
+        // In production, this would make an API call
         setModalOpen(false);
     };
 
     const handleDelete = (user: AdminUser) => setDeleteTarget(user);
     const confirmDelete = () => {
         if (deleteTarget) {
-            setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+            // For demo purposes, just close the dialog
+            // In production, this would make an API call to delete
             setDeleteTarget(null);
         }
     };
@@ -147,24 +153,33 @@ export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
                 </div>
 
                 <DataTable<AdminUser>
-                    data={paginated}
+                    data={users}
                     totalCount={totalCount}
                     page={page}
-                    pageSize={PAGE_SIZE}
-                    onPageChange={setPage}
+                    pageSize={pagination.per_page}
+                    onPageChange={handlePageChange}
                     searchValue={searchInput}
                     onSearchChange={setSearchInput}
-                    onSearchApply={() => {
-                        setAppliedSearch(searchInput);
-                        setPage(1);
-                    }}
-                    searchPlaceholder="Search by name, email, role…"
+                    onSearchApply={handleSearch}
+                    searchPlaceholder="Search by name, email…"
                     keyExtractor={(u) => u.id}
                     actions={
-                        <Button onClick={openCreate} size="sm" className="shrink-0">
-                            <PlusIcon className="size-4 sm:mr-1.5" />
-                            <span className="hidden sm:inline">Add User</span>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <SearchableSelect
+                                value={hotelFilter}
+                                onValueChange={handleHotelFilterChange}
+                                options={[
+                                    { value: 'all', label: 'All hotels' },
+                                    ...hotels.map((h) => ({ value: h.id, label: h.name }))
+                                ]}
+                                placeholder="Filter by hotel..."
+                                className="w-56"
+                            />
+                            <Button onClick={openCreate} size="sm" className="shrink-0">
+                                <PlusIcon className="size-4 sm:mr-1.5" />
+                                <span className="hidden sm:inline">Add User</span>
+                            </Button>
+                        </div>
                     }
                     columns={[
                         { key: 'name', label: 'Name' },
@@ -176,6 +191,23 @@ export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
                                 <Badge variant="secondary" className="capitalize">
                                     {u.role}
                                 </Badge>
+                            ),
+                        },
+                        {
+                            key: 'hotels',
+                            label: 'Hotels',
+                            render: (u) => (
+                                <div className="flex flex-wrap gap-1">
+                                    {u.hotels && u.hotels.length > 0 ? (
+                                        u.hotels.map((hotel) => (
+                                            <Badge key={hotel.id} variant="outline" className="text-xs">
+                                                {hotel.name}
+                                            </Badge>
+                                        ))
+                                    ) : (
+                                        <span className="text-muted-foreground text-xs">—</span>
+                                    )}
+                                </div>
                             ),
                         },
                         { key: 'phone', label: 'Phone' },
@@ -201,19 +233,24 @@ export default function AdminUsersIndex({ users: initialUsers = [] }: Props) {
                             label: 'Actions',
                             render: (u) => (
                                 <div className="flex gap-2">
-                                    {u.role === 'partner' && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-8"
-                                            title="View partner hotels"
-                                            asChild
-                                        >
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`size-8 ${u.role !== 'partner' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                        title={u.role === 'partner' ? 'View partner hotels' : 'No hotels'}
+                                        asChild={u.role === 'partner'}
+                                        disabled={u.role !== 'partner'}
+                                    >
+                                        {u.role === 'partner' ? (
                                             <Link href={`/admin/hotels?partner=${u.id}`}>
                                                 <Building2Icon className="size-4" />
                                             </Link>
-                                        </Button>
-                                    )}
+                                        ) : (
+                                            <span>
+                                                <Building2Icon className="size-4" />
+                                            </span>
+                                        )}
+                                    </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"

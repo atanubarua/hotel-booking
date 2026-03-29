@@ -14,6 +14,10 @@ export type AdminUser = {
     phone: string;
     createdAt: string;
     status: 'active' | 'inactive' | 'pending';
+    hotels?: {
+        id: string;
+        name: string;
+    }[];
 };
 
 export type AdminHotel = {

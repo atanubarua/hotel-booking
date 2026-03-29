@@ -242,15 +242,9 @@ class AdminRoomController extends Controller
                 }
             });
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Room images updated successfully.',
-            ]);
+            return back()->with('success', 'Room images updated successfully.');
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update images. Please try again.',
-            ], 500);
+            return back()->with('error', 'Failed to update images. Please try again.');
         }
     }
 }

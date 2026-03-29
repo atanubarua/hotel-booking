@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\HotelController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/hotels/search', [SearchController::class, 'index'])->name('hotels.search');
+Route::get('/hotels/{hotel}', [SearchController::class, 'show'])->name('hotels.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['non_admin_dashboard'])->group(function () {

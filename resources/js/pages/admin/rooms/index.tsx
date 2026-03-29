@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { ImageIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { ImageIcon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -24,6 +24,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import AdminLayout from '@/layouts/admin-layout';
 import type { PaginatedAdminRooms, PartnerHotel, PartnerRoom } from '@/types/admin';
 import type { BreadcrumbItem } from '@/types';
@@ -61,6 +62,7 @@ export default function AdminRoomsIndex() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<RoomWithHotel | null>(null);
     const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const form = useForm<RoomForm>({
         hotel_id: '',
@@ -186,17 +188,16 @@ export default function AdminRoomsIndex() {
                     keyExtractor={(r) => String(r.id)}
                     actions={
                         <div className="flex items-center gap-2">
-                            <Select value={filters.hotel || 'all'} onValueChange={handleHotelFilter}>
-                                <SelectTrigger className="h-9 w-40">
-                                    <SelectValue placeholder="All hotels" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All hotels</SelectItem>
-                                    {hotels.map((h) => (
-                                        <SelectItem key={h.id} value={String(h.id)}>{h.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                value={filters.hotel || 'all'}
+                                onValueChange={handleHotelFilter}
+                                options={[
+                                    { value: 'all', label: 'All hotels' },
+                                    ...hotels.map((h) => ({ value: String(h.id), label: h.name }))
+                                ]}
+                                placeholder="Filter by hotel..."
+                                className="w-72"
+                            />
                             <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
                                 <SelectTrigger className="h-9 w-36">
                                     <SelectValue placeholder="All statuses" />
@@ -222,49 +223,32 @@ export default function AdminRoomsIndex() {
                         },
                         {
                             key: 'images',
-                            label: 'Images',
+                            label: 'Image',
                             render: (r) => {
                                 const images = r.images ?? [];
                                 const hasImages = images.length > 0;
-                                const maxVisibleThumbnails = 3;
+                                const firstImage = hasImages ? images[0] : null;
 
                                 return (
                                     <div className="flex items-center gap-1">
-                                        {hasImages ? (
-                                            <>
-                                                {images.slice(0, maxVisibleThumbnails).map((image, index) => (
-                                                    <a
-                                                        key={image.id}
-                                                        href={image.path.startsWith('http') ? image.path : `/storage/${image.path}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="group relative"
-                                                        title={`Image ${index + 1} of ${images.length}`}
-                                                    >
-                                                        <img
-                                                            src={image.path.startsWith('http') ? image.path : `/storage/${image.path}`}
-                                                            alt={`${r.name} image ${index + 1}`}
-                                                            className="h-12 w-12 rounded-lg object-cover border cursor-pointer hover:opacity-80 transition-opacity"
-                                                            onError={(e) => {
-                                                                e.currentTarget.style.display = 'none';
-                                                            }}
-                                                        />
-                                                        {index === maxVisibleThumbnails - 1 && images.length > maxVisibleThumbnails && (
-                                                            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white text-xs font-medium">
-                                                                +{images.length - maxVisibleThumbnails}
-                                                            </div>
-                                                        )}
-                                                    </a>
-                                                ))}
-                                                {images.length > maxVisibleThumbnails && (
-                                                    <span className="text-xs text-muted-foreground ml-1">
-                                                        +{images.length - maxVisibleThumbnails} more
-                                                    </span>
-                                                )}
-                                            </>
+                                        {firstImage ? (
+                                            <button
+                                                onClick={() => setPreviewImage(firstImage.path.startsWith('http') ? firstImage.path : `/storage/${firstImage.path}`)}
+                                                className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded-lg"
+                                                title="Click to preview"
+                                            >
+                                                <img
+                                                    src={firstImage.path.startsWith('http') ? firstImage.path : `/storage/${firstImage.path}`}
+                                                    alt={`${r.name} image`}
+                                                    className="h-12 w-12 rounded-lg object-cover border hover:opacity-80 transition-opacity"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                    }}
+                                                />
+                                            </button>
                                         ) : (
                                             <div className="h-12 w-12 rounded-lg border border-dashed bg-muted flex items-center justify-center">
-                                                <span className="text-muted-foreground text-xs">No images</span>
+                                                <span className="text-muted-foreground text-xs">No image</span>
                                             </div>
                                         )}
                                     </div>
@@ -282,7 +266,7 @@ export default function AdminRoomsIndex() {
                         {
                             key: 'price_per_night',
                             label: 'Price/Night',
-                            render: (r) => `$${Number(r.price_per_night).toFixed(2)}`,
+                            render: (r) => `${Number(r.price_per_night).toFixed(0)} Tk`,
                         },
                         {
                             key: 'status',
@@ -413,7 +397,7 @@ export default function AdminRoomsIndex() {
                                     {form.errors.capacity && <p className="text-destructive text-sm">{form.errors.capacity}</p>}
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="room_price">Price/Night ($)</Label>
+                                    <Label htmlFor="room_price">Price/Night (Tk)</Label>
                                     <Input
                                         id="room_price"
                                         type="number"
@@ -452,6 +436,28 @@ export default function AdminRoomsIndex() {
                     variant="destructive"
                     onConfirm={confirmDelete}
                 />
+
+                {/* Image Preview Modal */}
+                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+                        <div className="relative">
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                                title="Close"
+                            >
+                                <XIcon className="size-5" />
+                            </button>
+                            {previewImage && (
+                                <img
+                                    src={previewImage}
+                                    alt="Room preview"
+                                    className="max-w-full max-h-[85vh] rounded-lg object-contain"
+                                />
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     );

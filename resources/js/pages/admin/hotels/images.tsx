@@ -1,9 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeftIcon, GripVerticalIcon, ImageIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { ArrowLeftIcon, ImageIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AdminLayout from '@/layouts/admin-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -37,6 +42,7 @@ export default function AdminHotelImages() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const [hoveredDeleteId, setHoveredDeleteId] = useState<number | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
         const fileList = e.target.files;
@@ -107,29 +113,22 @@ export default function AdminHotelImages() {
             });
         }
 
-        fetch(`/admin/hotels/${hotel.id}/images`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                'X-HTTP-Method-Override': 'POST',
+        router.post(`/admin/hotels/${hotel.id}/images`, formData, {
+            onSuccess: () => {
+                toast.success('Images updated successfully!');
+                // Reset new files after successful upload
+                setNewFiles([]);
+                setNewPreviews([]);
+                setDeleteIds([]);
+                setReorder([]);
             },
-        })
-            .then((response) => {
-                if (response.ok) {
-                    toast.success('Images updated successfully!');
-                    // Reload the page using Inertia
-                    router.reload({ only: ['hotel'] });
-                } else {
-                    toast.error('Failed to update images.');
-                }
-            })
-            .catch(() => {
-                toast.error('Failed to update images. Please try again.');
-            })
-            .finally(() => {
+            onError: () => {
+                toast.error('Failed to update images. Please check validation or size limits.');
+            },
+            onFinish: () => {
                 setIsSubmitting(false);
-            });
+            }
+        });
     }
 
     return (
@@ -169,33 +168,36 @@ export default function AdminHotelImages() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {images.map((img, index) => {
-                            const isMarkedForDeletion = deleteIds.includes(img.id);
-                            const imageUrl = img.path.startsWith('http') ? img.path : `/storage/${img.path}`;
-                            return (
-                                <div
-                                    key={img.id}
-                                    className={`relative group rounded-lg overflow-hidden border-2 transition-all ${
-                                        isMarkedForDeletion
-                                            ? 'border-destructive opacity-50'
-                                            : 'border-border hover:border-primary'
-                                    }`}
-                                >
-                                    <img
-                                        src={imageUrl}
-                                        alt={`Hotel image ${index + 1}`}
-                                        className="w-full h-32 object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.src = imageUrl;
-                                        }}
-                                    />
+                                {images.map((img, index) => {
+                                    const isMarkedForDeletion = deleteIds.includes(img.id);
+                                    const imageUrl = img.path.startsWith('http') ? img.path : `/storage/${img.path}`;
+                                    return (
+                                        <div
+                                            key={img.id}
+                                            className={`relative group rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                                                isMarkedForDeletion
+                                                    ? 'border-destructive opacity-50'
+                                                    : 'border-border hover:border-primary'
+                                            }`}
+                                            onClick={() => setPreviewImage(imageUrl)}
+                                        >
+                                            <img
+                                                src={imageUrl}
+                                                alt={`Hotel image ${index + 1}`}
+                                                className="w-full h-32 object-cover"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = 'https://placehold.co/400x300?text=Image+Not+Found';
+                                                }}
+                                            />
 
                                             {/* Overlay with actions */}
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            <div
+                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                                            >
                                                 {index > 0 && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => moveImage(index, index - 1)}
+                                                        onClick={(e) => { e.stopPropagation(); moveImage(index, index - 1); }}
                                                         className="p-2 bg-white rounded-full hover:bg-gray-100"
                                                         title="Move left"
                                                     >
@@ -205,7 +207,7 @@ export default function AdminHotelImages() {
                                                 {index < images.length - 1 && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => moveImage(index, index + 1)}
+                                                        onClick={(e) => { e.stopPropagation(); moveImage(index, index + 1); }}
                                                         className="p-2 bg-white rounded-full hover:bg-gray-100"
                                                         title="Move right"
                                                     >
@@ -217,11 +219,12 @@ export default function AdminHotelImages() {
                                             {/* Delete button - only show on hover */}
                                             <button
                                                 type="button"
-                                                onClick={() =>
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     isMarkedForDeletion
                                                         ? cancelDelete(img.id)
-                                                        : setDeleteConfirmId(img.id)
-                                                }
+                                                        : setDeleteConfirmId(img.id);
+                                                }}
                                                 onMouseEnter={() => setHoveredDeleteId(img.id)}
                                                 onMouseLeave={() => setHoveredDeleteId(null)}
                                                 className={`absolute top-2 right-2 size-8 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center ${
@@ -328,6 +331,30 @@ export default function AdminHotelImages() {
                         }
                     }}
                 />
+
+                {/* Image Preview Modal */}
+                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 border-0 bg-transparent shadow-none">
+                        <DialogTitle className="sr-only">Image Preview</DialogTitle>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setPreviewImage(null)}
+                                className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                                title="Close"
+                            >
+                                <XIcon className="size-5" />
+                            </button>
+                            {previewImage && (
+                                <img
+                                    src={previewImage}
+                                    alt="Hotel preview"
+                                    className="max-w-full max-h-[85vh] rounded-lg object-contain"
+                                />
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     );

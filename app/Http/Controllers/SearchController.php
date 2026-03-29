@@ -87,4 +87,33 @@ class SearchController extends Controller
             'priceMax' => (int) $priceMax,
         ]);
     }
+
+    public function show(Request $request, Hotel $hotel): Response
+    {
+        $request->validate([
+            'checkin' => 'nullable|date',
+            'checkout' => 'nullable|date|after_or_equal:checkin',
+            'guests' => 'nullable|integer|min:1',
+        ]);
+
+        $hotel->load(['images' => function ($query) {
+            $query->orderBy('order');
+        }]);
+
+        $guests = $request->input('guests', 1);
+
+        $rooms = $hotel->rooms()
+            ->where('status', 'available')
+            ->where('capacity', '>=', $guests)
+            ->with(['images' => function ($query) {
+                $query->orderBy('order');
+            }])
+            ->get();
+
+        return Inertia::render('hotels/show', [
+            'hotel' => $hotel,
+            'rooms' => $rooms,
+            'filters' => $request->only(['checkin', 'checkout', 'guests']),
+        ]);
+    }
 }

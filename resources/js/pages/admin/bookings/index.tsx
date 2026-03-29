@@ -157,7 +157,7 @@ export default function AdminBookingsIndex() {
                         {
                             key: 'totalAmount',
                             label: 'Amount',
-                            render: (b) => `$${b.totalAmount}`,
+                            render: (b) => `${b.totalAmount} Tk`,
                         },
                         {
                             key: 'status',

@@ -31,7 +31,7 @@ const stats = [
     },
     {
         title: 'Revenue (sample)',
-        value: '$12,450',
+        value: '৳12,450',
         icon: DollarSign,
         description: 'This month',
     },

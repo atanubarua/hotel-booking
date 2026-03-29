@@ -93,7 +93,7 @@ export default function PartnerRoomsIndex() {
                             key: 'price_per_night',
                             label: 'Price/Night',
                             render: (r) =>
-                                `$${Number(r.price_per_night).toFixed(2)}`,
+                                `${Number(r.price_per_night).toFixed(0)} Tk`,
                         },
                         {
                             key: 'status',

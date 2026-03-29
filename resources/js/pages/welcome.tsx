@@ -744,7 +744,7 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                                                     ৳{minPrice?.toLocaleString() ?? '—'}<span>/night</span>
                                                 </div>
                                             </div>
-                                            <a href="#" className="btn-book">View Details</a>
+                                            <Link href={`/hotels/${hotel.id}?checkin=${checkin}&checkout=${checkout}&guests=${guests}`} className="btn-book">View Details</Link>
                                         </div>
                                     </div>
                                 </div>
