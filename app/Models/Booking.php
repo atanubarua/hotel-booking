@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class Booking extends Model
@@ -27,6 +29,9 @@ class Booking extends Model
         'payment_method',
         'payment_status',
         'stripe_payment_intent_id',
+        'payment_intent_attempt',
+        'guest_access_token',
+        'payment_expires_at',
         'cancelled_at',
     ];
 
@@ -37,6 +42,7 @@ class Booking extends Model
             'check_out'     => 'date',
             'price_per_night' => 'decimal:2',
             'total_price'   => 'decimal:2',
+            'payment_expires_at' => 'datetime',
             'cancelled_at'  => 'datetime',
         ];
     }
@@ -56,16 +62,54 @@ class Booking extends Model
         return $this->belongsTo(Hotel::class);
     }
 
-    /**
-     * Generate a unique confirmation code like HBD-A1B2C3.
-     */
     public static function generateConfirmationCode(): string
     {
-        do {
-            $code = 'HBD-' . strtoupper(Str::random(6));
-        } while (self::where('confirmation_code', $code)->exists());
+        return 'HBD-' . strtoupper(Str::random(6));
+    }
 
-        return $code;
+    public static function generateGuestAccessToken(): string
+    {
+        return Str::random(40);
+    }
+
+    public function isHoldActive(): bool
+    {
+        if ($this->status !== 'pending') {
+            return false;
+        }
+
+        if (! in_array($this->payment_status, ['pending', 'failed'], true)) {
+            return false;
+        }
+
+        return $this->payment_expires_at?->isFuture() ?? false;
+    }
+
+    public function markExpired(): void
+    {
+        $this->forceFill([
+            'status' => 'expired',
+            'payment_expires_at' => null,
+        ])->save();
+    }
+
+    public function canBePaid(): bool
+    {
+        return $this->status === 'pending'
+            && in_array($this->payment_status, ['pending', 'failed'], true)
+            && $this->payment_expires_at?->isFuture();
+    }
+
+    public function scopeBlocking(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->where('status', 'confirmed')
+                ->orWhere(function (Builder $query): void {
+                    $query->where('status', 'pending')
+                        ->whereIn('payment_status', ['pending', 'failed'])
+                        ->where('payment_expires_at', '>', Carbon::now());
+                });
+        });
     }
 
     /**
@@ -75,7 +119,7 @@ class Booking extends Model
     public static function hasConflict(int $roomId, string $checkIn, string $checkOut, ?int $excludeId = null): bool
     {
         return self::where('room_id', $roomId)
-            ->whereIn('status', ['confirmed', 'pending'])
+            ->blocking()
             ->where('check_in', '<', $checkOut)
             ->where('check_out', '>', $checkIn)
             ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))

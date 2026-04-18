@@ -15,12 +15,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // MySQL: alter the enum column directly
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE rooms MODIFY COLUMN status ENUM('available','occupied','maintenance','out_of_order') NOT NULL DEFAULT 'available'");
     }
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE rooms MODIFY COLUMN status ENUM('available','occupied','maintenance') NOT NULL DEFAULT 'available'");
     }
 };

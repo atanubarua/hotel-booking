@@ -8,10 +8,16 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/hotels/search', [SearchController::class, 'index'])->name('hotels.search');
 Route::get('/hotels/{hotel}', [SearchController::class, 'show'])->name('hotels.show');
 
-// Booking flow — open to guests (no auth required)
+// Booking flow � open to guests (no auth required)
 Route::get('/bookings/create', [\App\Http\Controllers\BookingController::class, 'create'])->name('bookings.create');
 Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
 Route::get('/bookings/{booking}/pay', [\App\Http\Controllers\BookingController::class, 'pay'])->name('bookings.pay');
+Route::post('/bookings/{booking}/payment-intent', [\App\Http\Controllers\BookingController::class, 'paymentIntent'])->name('bookings.payment-intent');
+Route::get('/bookings/{booking}/status', [\App\Http\Controllers\BookingController::class, 'status'])->name('bookings.status');
+Route::get('/bookings/{booking}/confirmation', [\App\Http\Controllers\BookingController::class, 'confirmation'])->name('bookings.confirmation');
+Route::post('/stripe/webhook', [\App\Http\Controllers\BookingController::class, 'webhook'])
+    ->name('stripe.webhook')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['non_admin_dashboard'])->group(function () {
@@ -33,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['show']);
         Route::get('/bookings', [\App\Http\Controllers\Admin\AdminController::class, 'bookings'])->name('bookings.index');
+        Route::get('/stripe/setup-check', [\App\Http\Controllers\BookingController::class, 'stripeSetupCheck'])->name('stripe.setup-check');
     });
 
     // Partner portal

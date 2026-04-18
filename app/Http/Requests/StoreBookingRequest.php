@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Room;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreBookingRequest extends FormRequest
 {
@@ -23,6 +25,24 @@ class StoreBookingRequest extends FormRequest
             'guest_phone'      => 'required|string|max:30',
             'special_requests' => 'nullable|string|max:1000',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->has('room_id') || $validator->errors()->has('guests')) {
+                return;
+            }
+
+            $room = Room::find($this->integer('room_id'));
+
+            if ($room && $this->integer('guests') > $room->capacity) {
+                $validator->errors()->add(
+                    'guests',
+                    "This room fits a maximum of {$room->capacity} guest(s)."
+                );
+            }
+        });
     }
 
     public function messages(): array
