@@ -96,11 +96,15 @@ class BookingController extends Controller
                 $room = Room::lockForUpdate()->findOrFail($validated['room_id']);
 
                 if (in_array($room->status, ['maintenance', 'out_of_order'], true)) {
-                    abort(HttpResponse::HTTP_CONFLICT, 'This room is currently unavailable.');
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'room_id' => 'This room is currently unavailable.',
+                    ]);
                 }
 
                 if (Booking::hasConflict($room->id, $validated['check_in'], $validated['check_out'])) {
-                    abort(HttpResponse::HTTP_CONFLICT, 'Sorry, this room was just booked by someone else. Please select different dates.');
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'room_id' => 'Sorry, this room was just booked by someone else. Please select different dates.',
+                    ]);
                 }
 
                 $stay = RoomPricing::resolveStay($room, $validated['check_in'], $validated['check_out']);
@@ -127,14 +131,21 @@ class BookingController extends Controller
                     'payment_expires_at' => now()->addMinutes(config('booking.payment_hold_minutes', 15)),
                 ]);
             });
-        }, function (QueryException $e) use ($validated) {
-            if (! Str::contains($e->getMessage(), ['Duplicate entry', 'UNIQUE constraint failed'])) {
+        }, function (\Throwable $e) use ($validated) {
+            if (! $e instanceof QueryException || ! Str::contains($e->getMessage(), ['Duplicate entry', 'UNIQUE constraint failed'])) {
                 throw $e;
             }
 
             // Rare token/code collision — retry once with freshly generated values
             return DB::transaction(function () use ($validated) {
                 $room = Room::lockForUpdate()->findOrFail($validated['room_id']);
+
+                if (Booking::hasConflict($room->id, $validated['check_in'], $validated['check_out'])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'room_id' => 'Sorry, this room was just booked by someone else. Please select different dates.',
+                    ]);
+                }
+
                 $stay = RoomPricing::resolveStay($room, $validated['check_in'], $validated['check_out']);
 
                 return Booking::create([

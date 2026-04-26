@@ -32,7 +32,7 @@ A full-featured, multi-role hotel booking platform built with **Laravel 12**, **
 - **Concurrency-Safe Booking** — Pessimistic DB locking (`lockForUpdate`) prevents double-booking races
 - **Payment Hold System** — Rooms are held for a configurable window (default 15 min) awaiting payment
 - **Stripe Webhooks** — `payment_intent.succeeded` and `payment_intent.payment_failed` handled with signature verification and idempotent event processing
-- **Automatic Expiry** — Expired pending bookings released via queued jobs
+- **Automatic Expiry** — Abandoned checkouts are proactively swept and expired via the scheduled `bookings:expire-pending` cron command.
 - **3D Secure** — Automatic 3DS challenge support via Stripe
 
 ### 💰 Dynamic Pricing Engine
@@ -198,6 +198,11 @@ composer dev
 ```
 
 This runs **Laravel**, the **database queue worker**, and **Vite** concurrently.
+
+*Note: To test the automatic cleanup of abandoned bookings locally, run the Laravel scheduler in a separate terminal:*
+```bash
+php artisan schedule:work
+```
 
 > Visit **http://localhost:8000**
 
