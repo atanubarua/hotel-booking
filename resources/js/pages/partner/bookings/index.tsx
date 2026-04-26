@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import AdminLayout from '@/layouts/admin-layout';
+import PartnerLayout from '@/layouts/partner-layout';
 import type { AdminBooking, BookingStatus } from '@/types/admin';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Admin', href: '/admin' },
-    { title: 'Bookings', href: '/admin/bookings' },
+    { title: 'Partner', href: '/partner' },
+    { title: 'Bookings', href: '/partner/bookings' },
 ];
 
 // Only statuses staff can manually set — system statuses (pending, confirmed, expired) are excluded
@@ -51,7 +51,7 @@ interface Props {
     };
 }
 
-export default function AdminBookingsIndex({ bookings, pagination, filters }: Props) {
+export default function PartnerBookingsIndex({ bookings, pagination, filters }: Props) {
     const [searchInput, setSearchInput] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<AdminBooking | null>(null);
@@ -60,7 +60,7 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
 
     const handlePageChange = (newPage: number) => {
         router.get(
-            '/admin/bookings',
+            '/partner/bookings',
             { page: newPage, search: filters.search },
             { preserveState: true, preserveScroll: true }
         );
@@ -68,7 +68,7 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
 
     const handleSearchApply = () => {
         router.get(
-            '/admin/bookings',
+            '/partner/bookings',
             { search: searchInput, page: 1 },
             { preserveState: true, preserveScroll: true }
         );
@@ -82,7 +82,7 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
 
     const handleSave = () => {
         if (editing) {
-            router.put(`/admin/bookings/${editing.id}`, { status }, {
+            router.put(`/partner/bookings/${editing.id}`, { status }, {
                 preserveScroll: true,
                 onSuccess: () => setModalOpen(false)
             });
@@ -91,7 +91,7 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
 
     const confirmDelete = () => {
         if (deleteTarget) {
-            router.delete(`/admin/bookings/${deleteTarget.id}`, {
+            router.delete(`/partner/bookings/${deleteTarget.id}`, {
                 preserveScroll: true,
                 onSuccess: () => setDeleteTarget(null)
             });
@@ -143,15 +143,15 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
     const selectedStatusOption = statusOptions.find((o) => o.value === status);
 
     return (
-        <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Bookings - Admin" />
+        <PartnerLayout breadcrumbs={breadcrumbs}>
+            <Head title="Bookings - Partner" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4">
                 <div className="mb-1">
                     <h1 className="text-2xl font-semibold tracking-tight">
                         Bookings
                     </h1>
                     <p className="text-muted-foreground text-sm">
-                        View and manage all reservations
+                        View and manage all reservations for your hotels
                     </p>
                 </div>
 
@@ -306,6 +306,6 @@ export default function AdminBookingsIndex({ bookings, pagination, filters }: Pr
                     onConfirm={confirmDelete}
                 />
             </div>
-        </AdminLayout>
+        </PartnerLayout>
     );
 }

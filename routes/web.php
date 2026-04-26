@@ -38,7 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('rooms.images.update')
             ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['show']);
-        Route::get('/bookings', [\App\Http\Controllers\Admin\AdminController::class, 'bookings'])->name('bookings.index');
+        Route::resource('bookings', \App\Http\Controllers\Admin\AdminBookingController::class)->only(['index', 'update', 'destroy']);
         Route::get('/stripe/setup-check', [\App\Http\Controllers\BookingController::class, 'stripeSetupCheck'])->name('stripe.setup-check');
     });
 
@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('rooms.images.update')
             ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('rooms', \App\Http\Controllers\Partner\PartnerRoomController::class);
+        Route::resource('bookings', \App\Http\Controllers\Partner\PartnerBookingController::class)->only(['index', 'update', 'destroy']);
     });
 });
 

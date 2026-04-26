@@ -3,6 +3,7 @@ import {
     Building2,
     ChevronDownIcon,
     LayoutGrid,
+    CalendarDays,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import AppLogo from '@/components/app-logo';
@@ -31,6 +32,7 @@ type NavItem =
 
 const partnerNav: NavItem[] = [
     { title: 'Dashboard', href: '/partner', icon: LayoutGrid },
+    { title: 'Bookings', href: '/partner/bookings', icon: CalendarDays },
     {
         title: 'Hotel Management',
         icon: Building2,

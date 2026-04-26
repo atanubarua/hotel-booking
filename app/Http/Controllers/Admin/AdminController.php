@@ -89,8 +89,4 @@ class AdminController extends Controller
         return Inertia::render('admin/rooms/index');
     }
 
-    public function bookings(): Response
-    {
-        return Inertia::render('admin/bookings/index');
-    }
 }

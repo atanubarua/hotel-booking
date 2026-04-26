@@ -124,7 +124,7 @@ export type PaginatedAdminRooms = {
     total: number;
 };
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'checked_in' | 'checked_out';
+export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'completed' | 'cancelled' | 'no_show' | 'expired';
 
 export type AdminBooking = {
     id: string;
