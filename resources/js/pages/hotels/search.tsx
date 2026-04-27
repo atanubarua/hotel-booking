@@ -10,13 +10,15 @@ interface Hotel {
     images: HotelImage[]; rooms: Room[];
     rooms_min_price_per_night: number | null;
     rooms_max_price_per_night: number | null;
+    amenities: { id: number; name: string; icon: string }[];
 }
+interface Amenity { id: number; name: string; icon: string; }
 interface Filters {
     location?: string; checkin?: string; checkout?: string; guests?: string;
     stars?: string[]; min_price?: string; max_price?: string;
-    room_type?: string[]; sort?: string;
+    room_type?: string[]; sort?: string; amenities?: string[];
 }
-interface Props { hotels: Hotel[]; filters: Filters; priceMin: number; priceMax: number; }
+interface Props { hotels: Hotel[]; filters: Filters; priceMin: number; priceMax: number; amenities: Amenity[]; }
 
 function StarDisplay({ rating }: { rating: number }) {
     return (
@@ -48,7 +50,7 @@ const getTomorrow = () => {
     return d.toISOString().split('T')[0];
 };
 
-export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Props) {
+export default function HotelSearch({ hotels, filters, priceMin, priceMax, amenities }: Props) {
     const { auth } = usePage<{ auth: { user: { name: string } | null } }>().props;
 
     // Search bar state
@@ -63,6 +65,9 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
     );
     const [selectedRoomTypes, setSelectedRoomTypes] = useState<string[]>(
         filters.room_type ?? []
+    );
+    const [selectedAmenities, setSelectedAmenities] = useState<number[]>(
+        (filters.amenities ?? []).map(Number)
     );
     const [minPrice, setMinPrice] = useState<number>(
         filters.min_price ? +filters.min_price : priceMin
@@ -79,8 +84,9 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
         min_price: String(minPrice),
         max_price: String(maxPrice),
         room_type: selectedRoomTypes,
+        amenities: selectedAmenities.map(String),
         sort,
-    }), [location, checkin, checkout, guests, selectedStars, minPrice, maxPrice, selectedRoomTypes, sort]);
+    }), [location, checkin, checkout, guests, selectedStars, minPrice, maxPrice, selectedRoomTypes, selectedAmenities, sort]);
 
     // Debounced filter apply
     useEffect(() => {
@@ -88,7 +94,7 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
             router.get('/hotels/search', buildParams(), { preserveState: true, replace: true });
         }, 400);
         return () => clearTimeout(t);
-    }, [selectedStars, selectedRoomTypes, minPrice, maxPrice, sort]);
+    }, [selectedStars, selectedRoomTypes, selectedAmenities, minPrice, maxPrice, sort]);
 
     const handleSearch = (e: FormEvent) => {
         e.preventDefault();
@@ -101,15 +107,19 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
     const toggleRoomType = (t: string) =>
         setSelectedRoomTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
+    const toggleAmenity = (id: number) =>
+        setSelectedAmenities(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
     const resetFilters = () => {
         setSelectedStars([]);
         setSelectedRoomTypes([]);
+        setSelectedAmenities([]);
         setMinPrice(priceMin);
         setMaxPrice(priceMax);
         setSort('recommended');
     };
 
-    const activeFilterCount = selectedStars.length + selectedRoomTypes.length
+    const activeFilterCount = selectedStars.length + selectedRoomTypes.length + selectedAmenities.length
         + (minPrice > priceMin ? 1 : 0) + (maxPrice < priceMax ? 1 : 0)
         + (sort !== 'recommended' ? 1 : 0);
 
@@ -437,21 +447,22 @@ export default function HotelSearch({ hotels, filters, priceMin, priceMax }: Pro
                     <div className="filter-section">
                         <div className="filter-section-title">Room Type</div>
                         {ROOM_TYPES.map(t => (
-                            <div key={t} className="filter-item" onClick={() => toggleRoomType(t)}>
+                            <div key={t} className="filter-item">
                                 <input type="checkbox" id={`rt-${t}`}
-                                    checked={selectedRoomTypes.includes(t)} onChange={() => {}} />
+                                    checked={selectedRoomTypes.includes(t)} onChange={() => toggleRoomType(t)} />
                                 <label htmlFor={`rt-${t}`}>{t}</label>
                             </div>
                         ))}
                     </div>
 
-                    {/* Amenities (Static UI) */}
+                    {/* Amenities */}
                     <div className="filter-section">
                         <div className="filter-section-title">Amenities</div>
-                        {['Free Wi-Fi', 'Swimming Pool', 'Parking', 'Restaurant', 'Gym', 'Spa'].map(a => (
-                            <div key={a} className="filter-item">
-                                <input type="checkbox" id={`am-${a}`} />
-                                <label htmlFor={`am-${a}`}>{a}</label>
+                        {amenities.map(a => (
+                            <div key={a.id} className="filter-item" onClick={() => toggleAmenity(a.id)}>
+                                <input type="checkbox" id={`am-${a.id}`}
+                                    checked={selectedAmenities.includes(a.id)} onChange={() => {}} />
+                                <label onClick={e => e.preventDefault()}>{a.name}</label>
                             </div>
                         ))}
                     </div>

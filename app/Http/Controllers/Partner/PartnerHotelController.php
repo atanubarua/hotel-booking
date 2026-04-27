@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Partner;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateHotelRequest;
+use App\Models\Amenity;
 use App\Models\Hotel;
 use App\Models\HotelImage;
 use Exception;
@@ -65,7 +66,9 @@ class PartnerHotelController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('partner/hotels/create');
+        return Inertia::render('partner/hotels/create', [
+            'amenities' => Amenity::orderBy('name')->get(['id', 'name', 'icon']),
+        ]);
     }
 
     public function store(UpdateHotelRequest $request): RedirectResponse
@@ -83,6 +86,9 @@ class PartnerHotelController extends Controller
             }
         }
 
+        // Sync amenities
+        $hotel->amenities()->sync($request->input('amenities', []));
+
         return redirect()->route('partner.hotels.index')
             ->with('success', 'Hotel created successfully.');
     }
@@ -91,8 +97,13 @@ class PartnerHotelController extends Controller
     {
         abort_if($hotel->user_id !== auth()->id(), 403);
 
+        $hotel->load(['images', 'amenities']);
+
         return Inertia::render('partner/hotels/edit', [
-            'hotel' => $hotel->load('images'),
+            'hotel'     => array_merge($hotel->toArray(), [
+                'amenity_ids' => $hotel->amenities->pluck('id')->toArray(),
+            ]),
+            'amenities' => Amenity::orderBy('name')->get(['id', 'name', 'icon']),
         ]);
     }
 
@@ -105,6 +116,9 @@ class PartnerHotelController extends Controller
             'phone', 'email', 'description', 'status',
             'cancellation_deadline_hours', 'cancellation_refund_percent',
         ]));
+
+        // Sync amenities
+        $hotel->amenities()->sync($request->input('amenities', []));
 
         if ($request->delete_images) {
             foreach ($request->delete_images as $imageId) {

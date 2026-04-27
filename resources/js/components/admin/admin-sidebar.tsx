@@ -29,7 +29,27 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
-const adminNav = [
+type SubItem = { title: string; href: string };
+
+type NavLeaf = {
+    title: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+};
+
+type NavGroup = {
+    title: string;
+    icon: React.ComponentType<{ className?: string }>;
+    items: SubItem[];
+};
+
+type NavItem = NavLeaf | NavGroup;
+
+function isNavGroup(item: NavItem): item is NavGroup {
+    return 'items' in item && Array.isArray((item as NavGroup).items);
+}
+
+const adminNav: NavItem[] = [
     { title: 'Dashboard', href: '/admin', icon: LayoutGrid },
     { title: 'User Management', href: '/admin/users', icon: Users },
     {
@@ -70,7 +90,7 @@ export function AdminSidebar() {
             <SidebarContent>
                 <SidebarMenu className="px-2 py-0">
                     {adminNav.map((item) => {
-                        if ('items' in item) {
+                        if (isNavGroup(item)) {
                             const isActive = item.items.some((sub) =>
                                 path.startsWith(sub.href)
                             );

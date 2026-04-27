@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeftIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageUploader } from '@/components/image-uploader';
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/select';
 import PartnerLayout from '@/layouts/partner-layout';
 import type { BreadcrumbItem } from '@/types';
+
+type Amenity = { id: number; name: string; icon: string };
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Partner', href: '/partner' },
@@ -32,9 +34,11 @@ type HotelForm = {
     description: string;
     status: string;
     images: File[];
+    amenities: number[];
 };
 
 export default function PartnerHotelsCreate() {
+    const { amenities } = usePage<{ amenities: Amenity[] }>().props;
     const form = useForm<HotelForm>({
         name: '',
         address: '',
@@ -46,7 +50,13 @@ export default function PartnerHotelsCreate() {
         description: '',
         status: 'pending',
         images: [],
+        amenities: [],
     });
+
+    function toggleAmenity(id: number) {
+        const current = form.data.amenities;
+        form.setData('amenities', current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+    }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -160,6 +170,35 @@ export default function PartnerHotelsCreate() {
                                     maxFiles={10}
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Amenities */}
+                    <div className="rounded-lg border bg-card p-6 shadow-sm">
+                        <h2 className="mb-1 text-lg font-medium">Amenities</h2>
+                        <p className="text-muted-foreground text-sm mb-4">Select the amenities this hotel offers.</p>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            {amenities.map((a) => (
+                                <label
+                                    key={a.id}
+                                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                                        form.data.amenities.includes(a.id)
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-input hover:bg-muted/50'
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={form.data.amenities.includes(a.id)}
+                                        onChange={() => toggleAmenity(a.id)}
+                                    />
+                                    <span className="flex-1">{a.name}</span>
+                                    {form.data.amenities.includes(a.id) && (
+                                        <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><polyline points="20 6 9 17 4 12" /></svg>
+                                    )}
+                                </label>
+                            ))}
                         </div>
                     </div>
 

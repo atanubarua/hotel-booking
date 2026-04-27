@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreHotelRequest;
 use App\Http\Requests\UpdateHotelRequest;
 use App\Jobs\HotelRegistrationJob;
+use App\Models\Amenity;
 use App\Models\Hotel;
 use App\Models\HotelImage;
 use App\Models\User;
@@ -111,7 +112,9 @@ class HotelController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('admin/hotels/create');
+        return Inertia::render('admin/hotels/create', [
+            'amenities' => Amenity::orderBy('name')->get(['id', 'name', 'icon']),
+        ]);
     }
 
     public function store(StoreHotelRequest $request): RedirectResponse
@@ -140,6 +143,10 @@ class HotelController extends Controller
                     'cancellation_refund_percent' => $request->cancellation_refund_percent ?? 100,
                 ]);
 
+                if ($request->filled('amenities')) {
+                    $hotel->amenities()->sync($request->input('amenities'));
+                }
+
                 return [$partner, $hotel];
             });
 
@@ -166,7 +173,7 @@ class HotelController extends Controller
 
     public function edit(Hotel $hotel): Response
     {
-        $hotel->load(['partner', 'images']);
+        $hotel->load(['partner', 'images', 'amenities']);
 
         // Transform the hotel data to match the AdminHotel TypeScript type
         $transformedHotel = [
@@ -193,10 +200,12 @@ class HotelController extends Controller
                     'order' => $image->order,
                 ];
             })->toArray(),
+            'amenity_ids' => $hotel->amenities->pluck('id')->toArray(),
         ];
 
         return Inertia::render('admin/hotels/edit', [
-            'hotel' => $transformedHotel,
+            'hotel'     => $transformedHotel,
+            'amenities' => Amenity::orderBy('name')->get(['id', 'name', 'icon']),
         ]);
     }
 
@@ -309,6 +318,9 @@ class HotelController extends Controller
             'cancellation_deadline_hours' => $request->cancellation_deadline_hours ?? 48,
             'cancellation_refund_percent' => $request->cancellation_refund_percent ?? 100,
         ]);
+
+        // Sync amenities
+        $hotel->amenities()->sync($request->input('amenities', []));
 
         // Delete requested images
         if ($request->delete_images) {

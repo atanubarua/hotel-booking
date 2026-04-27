@@ -17,6 +17,8 @@ import PartnerLayout from '@/layouts/partner-layout';
 import type { HotelImageType, PartnerHotel } from '@/types/admin';
 import type { BreadcrumbItem } from '@/types';
 
+type Amenity = { id: number; name: string; icon: string };
+
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Partner', href: '/partner' },
     { title: 'Hotels', href: '/partner/hotels' },
@@ -37,10 +39,11 @@ type HotelForm = {
     cancellation_refund_percent: string;
     images: File[];
     delete_images: number[];
+    amenities: number[];
 };
 
 export default function PartnerHotelsEdit() {
-    const { hotel } = usePage<{ hotel: PartnerHotel }>().props;
+    const { hotel, amenities } = usePage<{ hotel: PartnerHotel & { amenity_ids: number[] }; amenities: Amenity[] }>().props;
     const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
 
     const form = useForm<HotelForm>({
@@ -57,7 +60,13 @@ export default function PartnerHotelsEdit() {
         cancellation_refund_percent: String((hotel as Record<string, unknown>).cancellation_refund_percent ?? 100),
         images: [],
         delete_images: [],
+        amenities: hotel.amenity_ids ?? [],
     });
+
+    function toggleAmenity(id: number) {
+        const current = form.data.amenities;
+        form.setData('amenities', current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+    }
 
     function handleDeleteImage(id: number) {
         const ids = [...deletingImageIds, id];
@@ -184,6 +193,35 @@ export default function PartnerHotelsEdit() {
                                     maxFiles={10}
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Amenities */}
+                    <div className="rounded-lg border bg-card p-6 shadow-sm">
+                        <h2 className="mb-1 text-lg font-medium">Amenities</h2>
+                        <p className="text-muted-foreground text-sm mb-4">Select the amenities this hotel offers.</p>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            {amenities.map((a) => (
+                                <label
+                                    key={a.id}
+                                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                                        form.data.amenities.includes(a.id)
+                                            ? 'border-primary bg-primary/10 text-primary'
+                                            : 'border-input hover:bg-muted/50'
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={form.data.amenities.includes(a.id)}
+                                        onChange={() => toggleAmenity(a.id)}
+                                    />
+                                    <span className="flex-1">{a.name}</span>
+                                    {form.data.amenities.includes(a.id) && (
+                                        <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><polyline points="20 6 9 17 4 12" /></svg>
+                                    )}
+                                </label>
+                            ))}
                         </div>
                     </div>
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Hotel;
+use App\Models\Amenity;
 use App\Models\Booking;
 use App\Support\RoomPricing;
 use Illuminate\Support\Collection;
@@ -15,10 +16,12 @@ class SearchController extends Controller
     public function index(Request $request): Response
     {
         $request->validate([
-            'location' => 'required|string|max:255',
-            'checkin'  => 'required|date|after_or_equal:today',
-            'checkout' => 'required|date|after:checkin',
-            'guests'   => 'nullable|integer|min:1',
+            'location'  => 'required|string|max:255',
+            'checkin'   => 'required|date|after_or_equal:today',
+            'checkout'  => 'required|date|after:checkin',
+            'guests'    => 'nullable|integer|min:1',
+            'amenities' => 'nullable|array',
+            'amenities.*' => 'integer|exists:amenities,id',
         ]);
 
         $guests      = (int) $request->input('guests', 1);
@@ -26,7 +29,7 @@ class SearchController extends Controller
 
         $hotels = Hotel::query()
             ->where('status', 'active')
-            ->with(['images', 'rooms.images', 'rooms.priceRules'])
+            ->with(['images', 'rooms.images', 'rooms.priceRules', 'amenities'])
             ->get();
 
         if ($request->filled('location')) {
@@ -83,6 +86,15 @@ class SearchController extends Controller
             })->filter(fn (array $hotel) => count($hotel['rooms']) > 0)->values();
         }
 
+        // Amenity filter — keep only hotels that have ALL selected amenities
+        if ($request->filled('amenities')) {
+            $amenityIds = array_map('intval', (array) $request->input('amenities'));
+            $hotels = $hotels->filter(function (array $hotel) use ($amenityIds) {
+                $hotelAmenityIds = array_column($hotel['amenities'], 'id');
+                return count(array_intersect($amenityIds, $hotelAmenityIds)) === count($amenityIds);
+            })->values();
+        }
+
         $sort   = $request->input('sort', 'recommended');
         $hotels = match ($sort) {
             'price_asc'  => $hotels->sortBy('rooms_min_price_per_night')->values(),
@@ -92,10 +104,11 @@ class SearchController extends Controller
         };
 
         return Inertia::render('hotels/search', [
-            'hotels'   => $hotels,
-            'filters'  => $request->only(['location', 'checkin', 'checkout', 'guests', 'stars', 'min_price', 'max_price', 'room_type', 'sort']),
-            'priceMin' => (int) $priceMin,
-            'priceMax' => (int) $priceMax,
+            'hotels'    => $hotels,
+            'filters'   => $request->only(['location', 'checkin', 'checkout', 'guests', 'stars', 'min_price', 'max_price', 'room_type', 'sort', 'amenities']),
+            'priceMin'  => (int) $priceMin,
+            'priceMax'  => (int) $priceMax,
+            'amenities' => Amenity::orderBy('name')->get(['id', 'name', 'icon']),
         ]);
     }
 
@@ -107,7 +120,7 @@ class SearchController extends Controller
             'guests'   => 'nullable|integer|min:1',
         ]);
 
-        $hotel->load(['images' => fn ($q) => $q->orderBy('order')]);
+        $hotel->load(['images' => fn ($q) => $q->orderBy('order'), 'amenities']);
 
         $guests   = $request->input('guests', 1);
         $checkin  = $request->input('checkin');
@@ -154,6 +167,7 @@ class SearchController extends Controller
         return Inertia::render('hotels/show', [
             'hotel'   => array_merge($hotel->toArray(), [
                 'cancellation_policy_text' => $hotel->cancellationPolicyText(),
+                'amenities' => $hotel->amenities->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'icon' => $a->icon])->values()->all(),
             ]),
             'rooms'   => $rooms,
             'filters' => $request->only(['checkin', 'checkout', 'guests']),
@@ -199,6 +213,7 @@ class SearchController extends Controller
                 'rooms'                     => $rooms,
                 'rooms_min_price_per_night' => null,
                 'rooms_max_price_per_night' => null,
+                'amenities'                 => $hotel->amenities->map(fn ($a) => ['id' => $a->id, 'name' => $a->name, 'icon' => $a->icon])->values()->all(),
             ];
 
             $this->hydrateHotelPriceRange($payload);

@@ -4,6 +4,7 @@ import { login, register, dashboard } from '@/routes';
 
 interface Image { id: number; path: string; order: number; }
 interface NightBreakdown { date: string; price: number; rule_name: string | null; season_type: string | null; }
+interface Amenity { id: number; name: string; icon: string; }
 interface Room {
     id: number;
     name: string;
@@ -19,9 +20,24 @@ interface Room {
     status: string;
     images: Image[];
 }
-interface Hotel { id: number; name: string; address: string; city: string; country: string; star_rating: number; description: string; status: string; images: Image[]; cancellation_policy_text: string; }
+interface Hotel { id: number; name: string; address: string; city: string; country: string; star_rating: number; description: string; status: string; images: Image[]; cancellation_policy_text: string; amenities: Amenity[]; }
 interface Filters { checkin?: string; checkout?: string; guests?: string; }
 interface Props { hotel: Hotel; rooms: Room[]; filters: Filters; }
+
+const AMENITY_EMOJI: Record<string, string> = {
+    'Free WiFi': '📶',
+    'Swimming Pool': '🏊',
+    'Pet-friendly': '🐾',
+    'Gym': '🏋️',
+    'Spa': '💆',
+    'Parking': '🅿️',
+    'Restaurant': '🍽️',
+    'Air Conditioning': '❄️',
+};
+
+function amenityEmoji(name: string): string {
+    return AMENITY_EMOJI[name] ?? '✓';
+}
 
 function StarDisplay({ rating }: { rating: number }) {
     return (
@@ -283,14 +299,16 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
                             <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 4 }}>Cancellation Policy</div>
                             <div style={{ fontSize: 15, color: '#0F172A', fontWeight: 500 }}>{hotel.cancellation_policy_text}</div>
                         </div>
-                        <div className="facilities">
-                            <div className="facility"><span className="fac-icon">✓</span> Free High-Speed WiFi</div>
-                            <div className="facility"><span className="fac-icon">✓</span> Free Parking</div>
-                            <div className="facility"><span className="fac-icon">✓</span> 24-hour Front Desk</div>
-                            <div className="facility"><span className="fac-icon">✓</span> Air Conditioning</div>
-                            <div className="facility"><span className="fac-icon">✓</span> Room Service</div>
-                            <div className="facility"><span className="fac-icon">✓</span> Non-smoking rooms</div>
-                        </div>
+                        {hotel.amenities && hotel.amenities.length > 0 && (
+                            <div className="facilities">
+                                {hotel.amenities.map(a => (
+                                    <div key={a.id} className="facility">
+                                        <span className="fac-icon">{amenityEmoji(a.name)}</span>
+                                        {a.name}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div>
                         <div className="booking-block">
