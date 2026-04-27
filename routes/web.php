@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->withoutMiddleware(['\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken']);
         Route::resource('rooms', \App\Http\Controllers\Admin\AdminRoomController::class)->except(['show']);
         Route::resource('bookings', \App\Http\Controllers\Admin\AdminBookingController::class)->only(['index', 'update', 'destroy']);
+        Route::resource('amenities', \App\Http\Controllers\Admin\AdminAmenityController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/stripe/setup-check', [\App\Http\Controllers\BookingController::class, 'stripeSetupCheck'])->name('stripe.setup-check');
     });
 

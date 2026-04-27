@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import * as LucideIcons from 'lucide-react';
 import { useState } from 'react';
 import { login, register, dashboard } from '@/routes';
 
@@ -24,19 +25,9 @@ interface Hotel { id: number; name: string; address: string; city: string; count
 interface Filters { checkin?: string; checkout?: string; guests?: string; }
 interface Props { hotel: Hotel; rooms: Room[]; filters: Filters; }
 
-const AMENITY_EMOJI: Record<string, string> = {
-    'Free WiFi': '📶',
-    'Swimming Pool': '🏊',
-    'Pet-friendly': '🐾',
-    'Gym': '🏋️',
-    'Spa': '💆',
-    'Parking': '🅿️',
-    'Restaurant': '🍽️',
-    'Air Conditioning': '❄️',
-};
-
-function amenityEmoji(name: string): string {
-    return AMENITY_EMOJI[name] ?? '✓';
+function AmenityIcon({ name }: { name: string }) {
+    const Icon = (LucideIcons as Record<string, React.ComponentType<{ size?: number; color?: string }>>)[name];
+    return Icon ? <Icon size={18} color="#10B981" /> : <span style={{ color: '#10B981' }}>✓</span>;
 }
 
 function StarDisplay({ rating }: { rating: number }) {
@@ -303,7 +294,7 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
                             <div className="facilities">
                                 {hotel.amenities.map(a => (
                                     <div key={a.id} className="facility">
-                                        <span className="fac-icon">{amenityEmoji(a.name)}</span>
+                                        <span className="fac-icon"><AmenityIcon name={a.icon} /></span>
                                         {a.name}
                                     </div>
                                 ))}

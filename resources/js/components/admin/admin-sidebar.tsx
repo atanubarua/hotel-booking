@@ -58,6 +58,7 @@ const adminNav: NavItem[] = [
         items: [
             { title: 'Hotels', href: '/admin/hotels' },
             { title: 'Rooms', href: '/admin/rooms' },
+            { title: 'Amenities', href: '/admin/amenities' },
         ],
     },
     { title: 'Bookings', href: '/admin/bookings', icon: CalendarCheck },
@@ -66,7 +67,7 @@ const adminNav: NavItem[] = [
 export function AdminSidebar() {
     const path = (usePage().url as string) || '';
     const isOnHotelsOrRooms =
-        path.startsWith('/admin/hotels') || path.startsWith('/admin/rooms');
+        path.startsWith('/admin/hotels') || path.startsWith('/admin/rooms') || path.startsWith('/admin/amenities');
     const [hotelOpen, setHotelOpen] = useState(false);
 
     useEffect(() => {
