@@ -35,7 +35,6 @@ type HotelForm = {
     partner_name: string;
     partner_email: string;
     images: File[];
-    [key: string]: unknown;
 };
 
 export default function AdminHotelsCreate() {

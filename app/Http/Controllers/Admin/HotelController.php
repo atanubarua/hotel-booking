@@ -126,16 +126,18 @@ class HotelController extends Controller
                 ]);
 
                 $hotel = Hotel::create([
-                    'user_id'     => $partner->id,
-                    'name'        => $request->name,
-                    'address'     => $request->address,
-                    'city'        => $request->city,
-                    'country'     => $request->country,
-                    'star_rating' => $request->star_rating,
-                    'phone'       => $request->phone,
-                    'email'       => $request->email,
-                    'description' => $request->description,
-                    'status'      => $request->status,
+                    'user_id'                     => $partner->id,
+                    'name'                        => $request->name,
+                    'address'                     => $request->address,
+                    'city'                        => $request->city,
+                    'country'                     => $request->country,
+                    'star_rating'                 => $request->star_rating,
+                    'phone'                       => $request->phone,
+                    'email'                       => $request->email,
+                    'description'                 => $request->description,
+                    'status'                      => $request->status,
+                    'cancellation_deadline_hours' => $request->cancellation_deadline_hours ?? 48,
+                    'cancellation_refund_percent' => $request->cancellation_refund_percent ?? 100,
                 ]);
 
                 return [$partner, $hotel];
@@ -181,6 +183,8 @@ class HotelController extends Controller
             'partnerEmail' => $hotel->partner->email ?? '',
             'roomCount' => $hotel->rooms->count(),
             'status' => $hotel->status,
+            'cancellationDeadlineHours' => $hotel->cancellation_deadline_hours ?? 48,
+            'cancellationRefundPercent' => $hotel->cancellation_refund_percent ?? 100,
             'createdAt' => $hotel->created_at->toIso8601String(),
             'images' => $hotel->images->map(function($image) {
                 return [
@@ -293,15 +297,17 @@ class HotelController extends Controller
     public function update(UpdateHotelRequest $request, Hotel $hotel): RedirectResponse
     {
         $hotel->update([
-            'name'        => $request->name,
-            'address'     => $request->address,
-            'city'        => $request->city,
-            'country'     => $request->country,
-            'star_rating' => $request->star_rating,
-            'phone'       => $request->phone,
-            'email'       => $request->email,
-            'description' => $request->description,
-            'status'      => $request->status,
+            'name'                        => $request->name,
+            'address'                     => $request->address,
+            'city'                        => $request->city,
+            'country'                     => $request->country,
+            'star_rating'                 => $request->star_rating,
+            'phone'                       => $request->phone,
+            'email'                       => $request->email,
+            'description'                 => $request->description,
+            'status'                      => $request->status,
+            'cancellation_deadline_hours' => $request->cancellation_deadline_hours ?? 48,
+            'cancellation_refund_percent' => $request->cancellation_refund_percent ?? 100,
         ]);
 
         // Delete requested images

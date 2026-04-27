@@ -26,6 +26,40 @@ class BookingController extends Controller
     ) {
     }
 
+    public function find(): Response
+    {
+        return Inertia::render('bookings/find');
+    }
+
+    public function lookup(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirmation_code' => 'required|string',
+            'guest_email' => 'required|email',
+        ]);
+
+        $booking = Booking::query()
+            ->where('confirmation_code', strtoupper($request->confirmation_code))
+            ->where('guest_email', $request->guest_email)
+            ->first();
+
+        if (! $booking) {
+            return back()->with('error', 'We could not find a booking with that confirmation code and email address.');
+        }
+
+        // Generate a new guest access token so they can access it again if they lost the original
+        if (! $booking->user_id) {
+            $booking->guest_access_token = Booking::generateGuestAccessToken();
+            $booking->save();
+            $this->rememberGuestBooking($request, $booking);
+        }
+
+        return redirect()->route('bookings.confirmation', [
+            'booking' => $booking,
+            'access' => $booking->guest_access_token,
+        ]);
+    }
+
     public function create(Request $request): Response|RedirectResponse
     {
         $request->validate([
@@ -339,6 +373,7 @@ class BookingController extends Controller
                 'country' => $booking->hotel->country,
                 'star_rating' => $booking->hotel->star_rating,
                 'images' => $booking->hotel->images->map(fn ($img) => ['id' => $img->id, 'path' => $img->path])->values()->all(),
+                'cancellation_policy_text' => $booking->hotel->cancellationPolicyText(),
             ],
             'room' => [
                 'name' => $booking->room->name,
@@ -352,7 +387,81 @@ class BookingController extends Controller
                 'booking' => $booking,
                 'access' => $booking->guest_access_token,
             ]),
+            'cancel_url' => route('guest.bookings.cancel', [
+                'booking' => $booking,
+                'access' => $booking->guest_access_token,
+            ]),
+            'is_cancellable' => $booking->isCancellable(),
+            'eligible_refund' => $booking->isCancellable() ? $booking->refundAmount($booking->hotel) : 0,
         ]);
+    }
+
+    public function cancel(Request $request, Booking $booking): RedirectResponse
+    {
+        if (! $this->canAccessBooking($request, $booking)) {
+            abort(HttpResponse::HTTP_FORBIDDEN, 'Unauthorized action.');
+        }
+
+        if (! $booking->isCancellable()) {
+            return back()->with('error', 'This booking cannot be cancelled.');
+        }
+
+        if ($booking->stripe_refund_id) {
+            return back()->with('error', 'This booking has already been refunded.');
+        }
+
+        $booking->load('hotel');
+        $hotel = $booking->hotel;
+
+        $refundAmount = $booking->refundAmount($hotel);
+
+        try {
+            $refundData = [];
+
+            if ($refundAmount > 0 && $booking->stripe_payment_intent_id) {
+                $totalPrice = (float) $booking->total_price;
+
+                if ($refundAmount >= $totalPrice) {
+                    $refundData = $this->stripe->createRefund(
+                        $booking->stripe_payment_intent_id,
+                        [
+                            'booking_id' => $booking->id,
+                            'reason'     => 'customer_cancellation',
+                        ]
+                    );
+                } else {
+                    $refundData = $this->stripe->createPartialRefund(
+                        $booking->stripe_payment_intent_id,
+                        $refundAmount,
+                        [
+                            'booking_id' => $booking->id,
+                            'reason'     => 'customer_cancellation_partial',
+                        ]
+                    );
+                }
+            }
+
+            $booking->forceFill([
+                'status'          => 'cancelled',
+                'cancelled_at'    => now(),
+                'payment_status'  => $refundAmount > 0 ? 'refunded' : $booking->payment_status,
+                'stripe_refund_id'=> $refundData['id'] ?? null,
+                'refund_amount'   => $refundAmount > 0 ? $refundAmount : null,
+            ])->save();
+
+        } catch (Throwable $e) {
+            report($e);
+            return back()->with('error', 'Failed to process the cancellation. Please try again or contact support.');
+        }
+
+        $message = $refundAmount > 0
+            ? "Booking cancelled. A refund of Tk " . number_format($refundAmount, 2) . " will be credited to your card within 5–10 business days."
+            : "Booking cancelled. No refund is applicable per the hotel's cancellation policy.";
+
+        return redirect()->route('bookings.confirmation', [
+            'booking' => $booking,
+            'access' => $booking->guest_access_token,
+        ])->with('success', $message);
     }
 
     public function stripeSetupCheck(): JsonResponse

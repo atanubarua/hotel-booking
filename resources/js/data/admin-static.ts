@@ -12,21 +12,21 @@ export const staticUsers: AdminUser[] = [
 ];
 
 export const staticHotels: AdminHotel[] = [
-    { id: '1', name: 'Grand Plaza Hotel', address: '123 Main St', city: 'New York', country: 'USA', starRating: 5, partnerName: 'Sarah Partner', roomCount: 120, status: 'active', createdAt: '2024-02-20' },
-    { id: '2', name: 'Sunset Beach Resort', address: '456 Ocean Ave', city: 'Miami', country: 'USA', starRating: 4, partnerName: 'Emma Wilson', roomCount: 85, status: 'active', createdAt: '2024-03-10' },
-    { id: '3', name: 'City Inn Downtown', address: '789 Business Blvd', city: 'Chicago', country: 'USA', starRating: 3, partnerName: 'Lisa Chen', roomCount: 45, status: 'active', createdAt: '2024-04-01' },
-    { id: '4', name: 'Mountain View Lodge', address: '100 Alpine Rd', city: 'Denver', country: 'USA', starRating: 4, partnerName: 'Sarah Partner', roomCount: 30, status: 'inactive', createdAt: '2024-01-25' },
+    { id: '1', name: 'Grand Plaza Hotel', address: '123 Main St', city: 'New York', country: 'USA', starRating: 5, partnerName: 'Plaza Group', roomCount: 150, status: 'active', createdAt: '2024-01-15' },
+    { id: '2', name: 'Sunset Beach Resort', address: '456 Ocean Dr', city: 'Miami', country: 'USA', starRating: 4, partnerName: 'Resort Corp', roomCount: 80, status: 'pending', createdAt: '2024-02-01' },
+    { id: '3', name: 'City Inn Downtown', address: '789 Market St', city: 'Chicago', country: 'USA', starRating: 3, partnerName: 'City Inns LLC', roomCount: 45, status: 'inactive', createdAt: '2023-11-20' },
+    { id: '4', name: 'Mountain View Lodge', address: '321 Alpine Rd', city: 'Denver', country: 'USA', starRating: 4, partnerName: 'Mountain Lodges', roomCount: 60, status: 'active', createdAt: '2024-03-05' },
     { id: '5', name: 'Riverside Suites', address: '200 River Dr', city: 'Boston', country: 'USA', starRating: 4, partnerName: 'Emma Wilson', roomCount: 60, status: 'active', createdAt: '2024-03-15' },
-];
+] as unknown as AdminHotel[];
 
 export const staticRooms: AdminRoom[] = [
-    { id: '1', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Deluxe King', type: 'Deluxe', capacity: 2, pricePerNight: 199, status: 'available', createdAt: '2024-02-20' },
-    { id: '2', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Executive Suite', type: 'Suite', capacity: 4, pricePerNight: 399, status: 'occupied', createdAt: '2024-02-20' },
-    { id: '3', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Standard Twin', type: 'Standard', capacity: 2, pricePerNight: 129, status: 'available', createdAt: '2024-02-21' },
-    { id: '4', hotelId: '2', hotelName: 'Sunset Beach Resort', name: 'Ocean View', type: 'Deluxe', capacity: 3, pricePerNight: 249, status: 'available', createdAt: '2024-03-10' },
-    { id: '5', hotelId: '2', hotelName: 'Sunset Beach Resort', name: 'Beachfront Suite', type: 'Suite', capacity: 4, pricePerNight: 449, status: 'occupied', createdAt: '2024-03-10' },
-    { id: '6', hotelId: '3', hotelName: 'City Inn Downtown', name: 'Business Single', type: 'Standard', capacity: 1, pricePerNight: 99, status: 'available', createdAt: '2024-04-01' },
-    { id: '7', hotelId: '3', hotelName: 'City Inn Downtown', name: 'Double Room', type: 'Standard', capacity: 2, pricePerNight: 119, status: 'maintenance', createdAt: '2024-04-01' },
+    { id: '1', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Deluxe King', type: 'Deluxe', capacity: 2, pricePerNight: 199, status: 'available', createdAt: '2024-02-20', images: [] },
+    { id: '2', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Executive Suite', type: 'Suite', capacity: 4, pricePerNight: 399, status: 'occupied', createdAt: '2024-02-20', images: [] },
+    { id: '3', hotelId: '1', hotelName: 'Grand Plaza Hotel', name: 'Standard Twin', type: 'Standard', capacity: 2, pricePerNight: 129, status: 'available', createdAt: '2024-02-21', images: [] },
+    { id: '4', hotelId: '2', hotelName: 'Sunset Beach Resort', name: 'Ocean View', type: 'Deluxe', capacity: 3, pricePerNight: 249, status: 'available', createdAt: '2024-03-10', images: [] },
+    { id: '5', hotelId: '2', hotelName: 'Sunset Beach Resort', name: 'Beachfront Suite', type: 'Suite', capacity: 4, pricePerNight: 449, status: 'occupied', createdAt: '2024-03-10', images: [] },
+    { id: '6', hotelId: '3', hotelName: 'City Inn Downtown', name: 'Business Single', type: 'Standard', capacity: 1, pricePerNight: 99, status: 'available', createdAt: '2024-04-01', images: [] },
+    { id: '7', hotelId: '3', hotelName: 'City Inn Downtown', name: 'Double Room', type: 'Standard', capacity: 2, pricePerNight: 119, status: 'maintenance', createdAt: '2024-04-01', images: [] },
 ];
 
 export const staticBookings: AdminBooking[] = [

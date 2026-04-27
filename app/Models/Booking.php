@@ -29,6 +29,8 @@ class Booking extends Model
         'payment_method',
         'payment_status',
         'stripe_payment_intent_id',
+        'stripe_refund_id',
+        'refund_amount',
         'payment_intent_attempt',
         'guest_access_token',
         'payment_expires_at',
@@ -38,12 +40,13 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
-            'check_in'      => 'date',
-            'check_out'     => 'date',
+            'check_in'        => 'date',
+            'check_out'       => 'date',
             'price_per_night' => 'decimal:2',
-            'total_price'   => 'decimal:2',
+            'total_price'     => 'decimal:2',
+            'refund_amount'   => 'decimal:2',
             'payment_expires_at' => 'datetime',
-            'cancelled_at'  => 'datetime',
+            'cancelled_at'    => 'datetime',
         ];
     }
 
@@ -83,6 +86,36 @@ class Booking extends Model
         }
 
         return $this->payment_expires_at?->isFuture() ?? false;
+    }
+
+    /**
+     * A booking can be cancelled by the customer if it is confirmed and paid.
+     */
+    public function isCancellable(): bool
+    {
+        return $this->status === 'confirmed'
+            && $this->payment_status === 'paid'
+            && is_null($this->cancelled_at)
+            && now()->startOfDay()->lte(\Carbon\Carbon::parse($this->check_in)->startOfDay());
+    }
+
+    /**
+     * Calculate the eligible refund amount based on the hotel's cancellation policy.
+     * - If cancelled before the deadline: refund_percent% of total_price
+     * - If cancelled after the deadline: 0 (non-refundable)
+     */
+    public function refundAmount(\App\Models\Hotel $hotel): float
+    {
+        $deadlineHours = $hotel->cancellation_deadline_hours ?? 48;
+        $refundPercent = $hotel->cancellation_refund_percent ?? 100;
+
+        $hoursUntilCheckIn = now()->diffInHours($this->check_in, false);
+
+        if ($hoursUntilCheckIn >= $deadlineHours) {
+            return round((float) $this->total_price * ($refundPercent / 100), 2);
+        }
+
+        return 0.0;
     }
 
     public function markExpired(): void

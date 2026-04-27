@@ -73,6 +73,7 @@ class PartnerHotelController extends Controller
         $hotel = Hotel::create(array_merge($request->only([
             'name', 'address', 'city', 'country', 'star_rating',
             'phone', 'email', 'description', 'status',
+            'cancellation_deadline_hours', 'cancellation_refund_percent',
         ]), ['user_id' => auth()->id()]));
 
         if ($request->hasFile('images')) {
@@ -102,6 +103,7 @@ class PartnerHotelController extends Controller
         $hotel->update($request->only([
             'name', 'address', 'city', 'country', 'star_rating',
             'phone', 'email', 'description', 'status',
+            'cancellation_deadline_hours', 'cancellation_refund_percent',
         ]));
 
         if ($request->delete_images) {

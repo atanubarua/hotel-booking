@@ -694,7 +694,11 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                             const isTopRated = hotel.star_rating >= 4;
 
                             return (
-                                <div key={hotel.id} className="hotel-card">
+                                <div 
+                                    key={hotel.id} 
+                                    className="hotel-card"
+                                    onClick={() => router.get(`/hotels/${hotel.id}`, { checkin, checkout, guests })}
+                                >
                                     <div className="hotel-img-wrapper">
                                         {heroImage ? (
                                             <img
@@ -825,6 +829,7 @@ export default function Welcome({ hotels = [], filters = {}, canRegister = true 
                         </div>
                         <div className="footer-col">
                             <div className="footer-col-title">Support</div>
+                            <Link href="/find-booking">Find My Booking</Link>
                             <a href="#">Help Center</a>
                             <a href="#">Cancellation</a>
                             <a href="#">Safety</a>

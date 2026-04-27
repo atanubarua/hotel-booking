@@ -33,9 +33,10 @@ type HotelForm = {
     email: string;
     description: string;
     status: string;
+    cancellation_deadline_hours: string;
+    cancellation_refund_percent: string;
     images: File[];
     delete_images: number[];
-    [key: string]: unknown;
 };
 
 export default function AdminHotelsEdit() {
@@ -52,6 +53,8 @@ export default function AdminHotelsEdit() {
         email: hotel.email,
         description: hotel.description ?? '',
         status: hotel.status,
+        cancellation_deadline_hours: String((hotel as Record<string, unknown>).cancellationDeadlineHours ?? 48),
+        cancellation_refund_percent: String((hotel as Record<string, unknown>).cancellationRefundPercent ?? 100),
         images: [],
         delete_images: [],
     });
@@ -214,6 +217,49 @@ export default function AdminHotelsEdit() {
                                     maxFiles={10}
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Cancellation Policy */}
+                    <div className="rounded-lg border bg-card p-6 shadow-sm">
+                        <h2 className="mb-1 text-lg font-medium">Cancellation Policy</h2>
+                        <p className="text-muted-foreground text-sm mb-4">Define how guests can cancel their bookings.</p>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="cancellation_deadline_hours">Free cancellation window (hours before check-in)</Label>
+                                <Input
+                                    id="cancellation_deadline_hours"
+                                    type="number"
+                                    min="0"
+                                    max="8760"
+                                    value={form.data.cancellation_deadline_hours}
+                                    onChange={(e) => form.setData('cancellation_deadline_hours', e.target.value)}
+                                    placeholder="48"
+                                />
+                                {form.errors.cancellation_deadline_hours && <p className="text-destructive text-sm">{form.errors.cancellation_deadline_hours}</p>}
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="cancellation_refund_percent">Refund percentage (0–100%)</Label>
+                                <Input
+                                    id="cancellation_refund_percent"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={form.data.cancellation_refund_percent}
+                                    onChange={(e) => form.setData('cancellation_refund_percent', e.target.value)}
+                                    placeholder="100"
+                                />
+                                {form.errors.cancellation_refund_percent && <p className="text-destructive text-sm">{form.errors.cancellation_refund_percent}</p>}
+                            </div>
+                            {/* Live preview */}
+                            {form.data.cancellation_deadline_hours && form.data.cancellation_refund_percent && (
+                                <div className="sm:col-span-2 rounded-md bg-muted/60 border px-4 py-3 text-sm text-muted-foreground">
+                                    Preview: {Number(form.data.cancellation_refund_percent) === 0
+                                        ? 'Non-refundable'
+                                        : `${Number(form.data.cancellation_refund_percent) === 100 ? 'Full refund' : `${form.data.cancellation_refund_percent}% refund`} if cancelled at least ${form.data.cancellation_deadline_hours} hours before check-in`
+                                    }
+                                </div>
+                            )}
                         </div>
                     </div>
 

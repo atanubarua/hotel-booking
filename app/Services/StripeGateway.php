@@ -74,6 +74,34 @@ class StripeGateway
         ]));
     }
 
+    /**
+     * Issue a partial refund for a specific amount (in BDT).
+     * $amountBdt is the human-readable amount (e.g. 5000.00).
+     * Stripe expects minor units (poisha), so we multiply by 100.
+     */
+    public function createPartialRefund(string $paymentIntentId, float $amountBdt, array $metadata = []): array
+    {
+        $amountMinorUnits = (int) round($amountBdt * 100);
+
+        $payload = [
+            'payment_intent' => $paymentIntentId,
+            'amount'         => $amountMinorUnits,
+        ];
+
+        foreach ($metadata as $key => $value) {
+            $payload["metadata[{$key}]"] = (string) $value;
+        }
+
+        return $this->decode($this->request('post', '/refunds', $payload, [
+            'Idempotency-Key' => sprintf(
+                'payment-intent:%s:partial-refund:%d:%s',
+                $paymentIntentId,
+                $amountMinorUnits,
+                md5(json_encode($metadata) ?: ''),
+            ),
+        ]));
+    }
+
     public function verifyWebhookSignature(string $payload, string $signatureHeader): bool
     {
         $secret = (string) config('services.stripe.webhook_secret');

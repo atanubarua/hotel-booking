@@ -19,7 +19,26 @@ class Hotel extends Model
         'email',
         'description',
         'status',
+        'cancellation_deadline_hours',
+        'cancellation_refund_percent',
     ];
+
+    /**
+     * Returns a human-readable cancellation policy string.
+     * Example: "Free cancellation up to 48 hours before check-in (100% refund)"
+     */
+    public function cancellationPolicyText(): string
+    {
+        $hours = $this->cancellation_deadline_hours ?? 48;
+        $percent = $this->cancellation_refund_percent ?? 100;
+
+        if ($percent === 0) {
+            return 'Non-refundable';
+        }
+
+        $refundLabel = $percent === 100 ? 'Full refund' : "{$percent}% refund";
+        return "{$refundLabel} if cancelled at least {$hours} hours before check-in";
+    }
 
     public function partner(): BelongsTo
     {

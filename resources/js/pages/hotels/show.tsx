@@ -19,7 +19,7 @@ interface Room {
     status: string;
     images: Image[];
 }
-interface Hotel { id: number; name: string; address: string; city: string; country: string; star_rating: number; description: string; status: string; images: Image[]; }
+interface Hotel { id: number; name: string; address: string; city: string; country: string; star_rating: number; description: string; status: string; images: Image[]; cancellation_policy_text: string; }
 interface Filters { checkin?: string; checkout?: string; guests?: string; }
 interface Props { hotel: Hotel; rooms: Room[]; filters: Filters; }
 
@@ -279,6 +279,10 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
                     <div className="description-block">
                         <h2>Experience true comfort at {hotel.name}</h2>
                         <p>{hotel.description || 'Welcome to our wonderful hotel! Enjoy top-notch amenities, exceptionally comfortable rooms, and a prime location for all your travel needs. We look forward to hosting you soon.'}</p>
+                        <div style={{ marginTop: 24, padding: 16, background: '#F1F5F9', borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 4 }}>Cancellation Policy</div>
+                            <div style={{ fontSize: 15, color: '#0F172A', fontWeight: 500 }}>{hotel.cancellation_policy_text}</div>
+                        </div>
                         <div className="facilities">
                             <div className="facility"><span className="fac-icon">✓</span> Free High-Speed WiFi</div>
                             <div className="facility"><span className="fac-icon">✓</span> Free Parking</div>

@@ -152,7 +152,9 @@ class SearchController extends Controller
         })->values();
 
         return Inertia::render('hotels/show', [
-            'hotel'   => $hotel,
+            'hotel'   => array_merge($hotel->toArray(), [
+                'cancellation_policy_text' => $hotel->cancellationPolicyText(),
+            ]),
             'rooms'   => $rooms,
             'filters' => $request->only(['checkin', 'checkout', 'guests']),
         ]);

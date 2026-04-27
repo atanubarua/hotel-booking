@@ -32,7 +32,6 @@ type HotelForm = {
     description: string;
     status: string;
     images: File[];
-    [key: string]: unknown;
 };
 
 export default function PartnerHotelsCreate() {

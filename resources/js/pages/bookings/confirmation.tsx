@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 interface Booking {
@@ -24,6 +24,7 @@ interface Hotel {
     country: string;
     star_rating: number;
     images: { id: number; path: string }[];
+    cancellation_policy_text: string;
 }
 
 interface Room {
@@ -37,6 +38,9 @@ interface Props {
     room: Room;
     status_url: string;
     pay_url: string;
+    cancel_url: string;
+    is_cancellable: boolean;
+    eligible_refund: number;
 }
 
 function formatDate(d: string) {
@@ -48,10 +52,22 @@ function formatDate(d: string) {
     });
 }
 
-export default function BookingConfirmation({ booking: initialBooking, hotel, room, status_url, pay_url }: Props) {
+export default function BookingConfirmation({ booking: initialBooking, hotel, room, status_url, pay_url, cancel_url, is_cancellable, eligible_refund }: Props) {
     const [booking, setBooking] = useState(initialBooking);
     const [polling, setPolling] = useState(initialBooking.payment_status !== 'paid');
     const [timedOut, setTimedOut] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    const handleCancel = () => {
+        if (!confirm(`Are you sure you want to cancel this booking? \n\nYou will receive a refund of Tk ${eligible_refund.toLocaleString()}.\n\nPolicy: ${hotel.cancellation_policy_text}`)) {
+            return;
+        }
+
+        setIsCancelling(true);
+        router.post(cancel_url, {}, {
+            onFinish: () => setIsCancelling(false),
+        });
+    };
 
     useEffect(() => {
         if (!polling) return;
@@ -155,9 +171,11 @@ export default function BookingConfirmation({ booking: initialBooking, hotel, ro
                     .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #64748b; font-weight: 700; margin-bottom: 8px; }
                     .card-value { font-size: 17px; font-weight: 800; letter-spacing: -0.03em; }
                     .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
-                    .action { display: inline-flex; align-items: center; justify-content: center; padding: 14px 18px; border-radius: 16px; text-decoration: none; font-weight: 800; }
+                    .action { display: inline-flex; align-items: center; justify-content: center; padding: 14px 18px; border-radius: 16px; text-decoration: none; font-weight: 800; border: none; cursor: pointer; font: inherit; }
                     .action.primary { background: #0f766e; color: white; }
                     .action.secondary { background: #e2e8f0; color: #334155; }
+                    .action.destructive { background: #fee2e2; color: #991b1b; }
+                    .action.destructive:hover { background: #fecaca; }
                 `}</style>
             </Head>
 
@@ -201,6 +219,10 @@ export default function BookingConfirmation({ booking: initialBooking, hotel, ro
                                 <div className="card-label">Amount</div>
                                 <div className="card-value">Tk {booking.total_price.toLocaleString()}</div>
                             </div>
+                            <div className="card" style={{ gridColumn: '1 / -1' }}>
+                                <div className="card-label">Cancellation Policy</div>
+                                <div className="card-value" style={{ fontSize: '15px' }}>{hotel.cancellation_policy_text}</div>
+                            </div>
                         </div>
 
                         <div className="actions">
@@ -208,7 +230,16 @@ export default function BookingConfirmation({ booking: initialBooking, hotel, ro
                                 <Link href={pay_url} className="action primary">Return to payment</Link>
                             )}
                             {timedOut && (
-                                <button className="action secondary" style={{ border: 'none', cursor: 'pointer', font: 'inherit' }} onClick={() => window.location.reload()}>Refresh page</button>
+                                <button className="action secondary" onClick={() => window.location.reload()}>Refresh page</button>
+                            )}
+                            {is_cancellable && (
+                                <button
+                                    className="action destructive"
+                                    onClick={handleCancel}
+                                    disabled={isCancelling}
+                                >
+                                    {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
+                                </button>
                             )}
                             <Link href="/" className="action secondary">Back to home</Link>
                         </div>

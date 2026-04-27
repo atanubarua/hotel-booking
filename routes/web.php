@@ -9,6 +9,8 @@ Route::get('/hotels/search', [SearchController::class, 'index'])->name('hotels.s
 Route::get('/hotels/{hotel}', [SearchController::class, 'show'])->name('hotels.show');
 
 // Booking flow � open to guests (no auth required)
+Route::get('/find-booking', [\App\Http\Controllers\BookingController::class, 'find'])->name('bookings.find');
+Route::post('/find-booking', [\App\Http\Controllers\BookingController::class, 'lookup'])->name('bookings.lookup');
 Route::get('/bookings/create', [\App\Http\Controllers\BookingController::class, 'create'])->name('bookings.create');
 Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
 Route::get('/bookings/{booking}/pay', [\App\Http\Controllers\BookingController::class, 'pay'])->name('bookings.pay');
@@ -19,10 +21,16 @@ Route::post('/stripe/webhook', [\App\Http\Controllers\BookingController::class, 
     ->name('stripe.webhook')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 
+Route::post('/bookings/{booking}/cancel', [\App\Http\Controllers\BookingController::class, 'cancel'])->name('guest.bookings.cancel');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(['non_admin_dashboard'])->group(function () {
         Route::inertia('dashboard', 'dashboard')->name('dashboard');
     });
+
+    // Customer: My Bookings portal
+    Route::get('/my-bookings', [\App\Http\Controllers\CustomerBookingController::class, 'index'])->name('bookings.my-bookings');
+    Route::post('/my-bookings/{booking}/cancel', [\App\Http\Controllers\CustomerBookingController::class, 'cancel'])->name('bookings.cancel');
 
     // Admin dashboard
     Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {

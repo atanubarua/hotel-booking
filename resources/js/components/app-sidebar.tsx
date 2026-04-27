@@ -22,6 +22,11 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+    {
+        title: 'My Bookings',
+        href: '/my-bookings',
+        icon: BookOpen,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
