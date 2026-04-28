@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import * as LucideIcons from 'lucide-react';
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { login, register, dashboard } from '@/routes';
 
 interface Image { id: number; path: string; order: number; }
@@ -42,8 +42,20 @@ function StarDisplay({ rating }: { rating: number }) {
     );
 }
 
+const getToday = () => new Date().toISOString().split('T')[0];
+const getTomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; };
+
 export default function HotelShow({ hotel, rooms, filters }: Props) {
     const { auth } = usePage<{ auth: { user: { name: string } | null } }>().props;
+
+    const [checkin, setCheckin] = useState(filters.checkin || getToday());
+    const [checkout, setCheckout] = useState(filters.checkout || getTomorrow());
+    const [guests, setGuests] = useState(filters.guests || '1');
+
+    const applyDates = (e: FormEvent) => {
+        e.preventDefault();
+        router.get(`/hotels/${hotel.id}`, { checkin, checkout, guests }, { preserveScroll: true });
+    };
 
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [modalImages, setModalImages] = useState<string[]>([]);
@@ -68,8 +80,8 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
         setSelectedImage(modalImages[i]);
     };
 
-    const checkinDate = filters.checkin ? new Date(filters.checkin) : null;
-    const checkoutDate = filters.checkout ? new Date(filters.checkout) : null;
+    const checkinDate = checkin ? new Date(checkin) : null;
+    const checkoutDate = checkout ? new Date(checkout) : null;
     let nights = 1;
     if (checkinDate && checkoutDate && !isNaN(checkinDate.getTime()) && !isNaN(checkoutDate.getTime())) {
         const diff = Math.ceil(Math.abs(checkoutDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -81,9 +93,9 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
             method: 'get',
             data: {
                 room_id:   roomId,
-                check_in:  filters.checkin  ?? '',
-                check_out: filters.checkout ?? '',
-                guests:    filters.guests   ?? '1',
+                check_in:  checkin,
+                check_out: checkout,
+                guests:    guests,
             },
         });
     };
@@ -213,10 +225,14 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
 
                     .booking-block{background:#EFF6FF;border:2px solid #BFDBFE;border-radius:16px;padding:24px;position:sticky;top:84px}
                     .booking-title{font-size:16px;font-weight:800;color:#1E3A8A;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #DBEAFE}
-                    .summary-row{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:500;color:#1E40AF}
-                    .summary-val{color:#1E293B;font-weight:700}
-                    .btn-scroll{width:100%;text-align:center;display:block;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;transition:.2s;text-decoration:none}
+                    .summary-row{display:flex;flex-direction:column;margin-bottom:12px;font-size:13px;font-weight:600;color:#1E40AF;gap:4px}
+                    .summary-row label{font-size:12px;font-weight:700;color:#1E40AF;text-transform:uppercase;letter-spacing:.4px}
+                    .summary-input{width:100%;border:1.5px solid #BFDBFE;border-radius:7px;padding:7px 10px;font-size:14px;font-family:'Inter',sans-serif;color:#1E293B;background:#fff;outline:none;transition:.2s}
+                    .summary-input:focus{border-color:var(--primary)}
+                    .btn-scroll{width:100%;text-align:center;display:block;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;transition:.2s;text-decoration:none;font-family:'Inter',sans-serif}
                     .btn-scroll:hover{background:var(--primary-light)}
+                    .btn-update{width:100%;background:#EFF6FF;color:var(--primary);border:1.5px solid #BFDBFE;border-radius:8px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;transition:.2s;font-family:'Inter',sans-serif}
+                    .btn-update:hover{background:#DBEAFE}
 
                     .rooms-section{background:#fff;border-radius:16px;border:1px solid var(--border);padding:24px;box-shadow:var(--card-shadow)}
                     .rooms-section h2{font-size:22px;font-weight:800;color:#1E293B;margin-bottom:20px}
@@ -304,23 +320,31 @@ export default function HotelShow({ hotel, rooms, filters }: Props) {
                     <div>
                         <div className="booking-block">
                             <div className="booking-title">Your Booking Details</div>
-                            <div className="summary-row">
-                                <span>Check-in:</span>
-                                <span className="summary-val">{filters.checkin || 'Not Selected'}</span>
-                            </div>
-                            <div className="summary-row">
-                                <span>Check-out:</span>
-                                <span className="summary-val">{filters.checkout || 'Not Selected'}</span>
-                            </div>
-                            <div className="summary-row">
-                                <span>Total Length of Stay:</span>
-                                <span className="summary-val">{nights} {nights === 1 ? 'night' : 'nights'}</span>
-                            </div>
-                            <div className="summary-row">
-                                <span>Guests:</span>
-                                <span className="summary-val">{filters.guests || 1} Person(s)</span>
-                            </div>
-                            <a href="#available-rooms" className="btn-scroll">
+                            <form onSubmit={applyDates}>
+                                <div className="summary-row">
+                                    <label htmlFor="b-checkin">Check-in</label>
+                                    <input id="b-checkin" type="date" className="summary-input"
+                                        value={checkin} min={getToday()}
+                                        onChange={e => setCheckin(e.target.value)} />
+                                </div>
+                                <div className="summary-row">
+                                    <label htmlFor="b-checkout">Check-out</label>
+                                    <input id="b-checkout" type="date" className="summary-input"
+                                        value={checkout} min={checkin || getToday()}
+                                        onChange={e => setCheckout(e.target.value)} />
+                                </div>
+                                <div className="summary-row">
+                                    <label htmlFor="b-guests">Guests</label>
+                                    <input id="b-guests" type="number" className="summary-input"
+                                        value={guests} min="1" max="20"
+                                        onChange={e => setGuests(e.target.value)} />
+                                </div>
+                                <div style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
+                                    {nights} {nights === 1 ? 'night' : 'nights'}
+                                </div>
+                                <button type="submit" className="btn-update">Update Availability</button>
+                            </form>
+                            <a href="#available-rooms" className="btn-scroll" style={{ marginTop: 12 }}>
                                 See Available Rooms ↓
                             </a>
                         </div>
